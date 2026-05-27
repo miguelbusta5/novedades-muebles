@@ -41,8 +41,9 @@ nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.
 .dash-title{font-size:22px;font-weight:800;letter-spacing:-.01em;}
 .dash-sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:400;}
 
-.filter-bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;box-shadow:var(--shadow);}
+.filter-bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;box-shadow:var(--shadow);}
 .filter-bar label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0;}
 .filter-input{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.45rem .85rem;font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s,box-shadow .15s;min-width:130px;}
 .filter-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #0ea5e924;}
 select.filter-input option{background:var(--surface);}
@@ -160,6 +161,78 @@ textarea.form-input{resize:vertical;min-height:72px;}
 .btn-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;transition:background .15s,color .15s,border-color .15s;padding:0;line-height:1;}
 .btn-icon:hover{background:var(--surface2);color:var(--text);border-color:var(--accent);}
 .btn-icon.del:hover{background:#fef2f2;color:var(--red);border-color:#fecaca;}
+
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 640px) {
+  /* Navbar compacta */
+  nav { padding: 0 .75rem; }
+  .nav-brand {
+    font-size: 11px;
+    padding: .65rem .65rem .65rem 0;
+    margin-right: .4rem;
+    letter-spacing: .07em;
+  }
+  .nav-tab { padding: .65rem .65rem; font-size: 9.5px; letter-spacing: .04em; }
+
+  /* Sync bar */
+  .sync-bar { padding: .4rem .75rem; font-size: 10px; gap: .4rem; }
+
+  /* Contenido */
+  .view { padding: .875rem .625rem; }
+
+  /* Encabezado dashboard */
+  .dash-header { margin-bottom: .875rem; gap: .5rem; }
+  .dash-title { font-size: 17px; }
+  .dash-sub { font-size: 11px; }
+
+  /* Filter bar apilado en columna */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .55rem;
+    padding: .75rem;
+    border-radius: 10px;
+  }
+  /* Cada grupo label+input ocupa el ancho completo */
+  .filter-group { width: 100%; }
+  .filter-group .filter-input { width: 100% !important; min-width: unset !important; }
+  /* Inputs sueltos en filter-bar (historial) */
+  .filter-bar > .filter-input { width: 100% !important; min-width: unset !important; }
+  /* Date range ocupa todo el ancho */
+  .date-range { width: 100%; display: flex; }
+  .date-range input { flex: 1; min-width: 0 !important; width: auto !important; }
+  /* KPI total se separa del flujo auto */
+  .kpi-total { margin-left: 0; width: 100%; padding: .55rem 1rem; }
+  .kpi-total-val { font-size: 22px; }
+  /* Botón limpiar a ancho completo */
+  .filter-bar > .btn { width: 100%; text-align: center; }
+
+  /* KPIs en 2 columnas */
+  .kpi-strip { grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: 1rem; }
+  .kpi-card { padding: .75rem .875rem; }
+  .kpi-val { font-size: 20px; }
+  .kpi-lbl { font-size: 9px; }
+
+  /* Gráficas */
+  .chart-card { padding: .875rem 1rem; }
+  .card-title { font-size: 11px; margin-bottom: .75rem; }
+
+  /* Formulario */
+  .form-card { padding: 1rem .875rem; border-radius: 10px; }
+  .form-title { font-size: 16px; margin-bottom: 1rem; }
+
+  /* Historial header */
+  #view-historial > div:first-child { flex-direction: column; align-items: flex-start; }
+
+  /* Modal */
+  .modal-box { padding: 1.25rem; }
+}
+
+@media (max-width: 400px) {
+  .nav-brand span { display: none; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .nav-tab { padding: .6rem .5rem; font-size: 9px; }
+}
 </style>
 </head>
 <body>
@@ -189,23 +262,31 @@ textarea.form-input{resize:vertical;min-height:72px;}
     <button class="btn btn-ghost" style="font-size:11px" onclick="exportCSV()">↓ Exportar CSV</button>
   </div>
   <div class="filter-bar">
-    <label>PLU</label>
-    <input type="text" class="filter-input" id="fil-plu" placeholder="Introduzca un valor" style="width:140px" oninput="applyFilters()">
-    <label>Fabricante</label>
-    <select class="filter-input" id="fil-fab" onchange="applyFilters()" style="width:170px"><option value="">Todos</option></select>
-    <label>Periodo</label>
-    <select class="filter-input" id="fil-periodo" onchange="applyFilters()" style="width:140px">
-      <option value="">Todos</option>
-      <option value="7">Últimos 7 días</option>
-      <option value="30">Últimos 30 días</option>
-      <option value="2026-04">Abril 2026</option>
-      <option value="2026-05">Mayo 2026</option>
-    </select>
-    <label>Rango</label>
-    <div class="date-range">
-      <input type="date" class="filter-input" id="fil-desde" onchange="applyFilters()" title="Desde">
-      <span class="date-sep">—</span>
-      <input type="date" class="filter-input" id="fil-hasta" onchange="applyFilters()" title="Hasta">
+    <div class="filter-group">
+      <label>PLU</label>
+      <input type="text" class="filter-input" id="fil-plu" placeholder="Introduzca un valor" style="width:140px" oninput="applyFilters()">
+    </div>
+    <div class="filter-group">
+      <label>Fabricante</label>
+      <select class="filter-input" id="fil-fab" onchange="applyFilters()" style="width:170px"><option value="">Todos</option></select>
+    </div>
+    <div class="filter-group">
+      <label>Periodo</label>
+      <select class="filter-input" id="fil-periodo" onchange="applyFilters()" style="width:140px">
+        <option value="">Todos</option>
+        <option value="7">Últimos 7 días</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="2026-04">Abril 2026</option>
+        <option value="2026-05">Mayo 2026</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Rango</label>
+      <div class="date-range">
+        <input type="date" class="filter-input" id="fil-desde" onchange="applyFilters()" title="Desde">
+        <span class="date-sep">—</span>
+        <input type="date" class="filter-input" id="fil-hasta" onchange="applyFilters()" title="Hasta">
+      </div>
     </div>
     <button class="btn btn-ghost" style="font-size:10px;padding:.4rem .8rem" onclick="clearAllFilters()">Limpiar</button>
     <div class="kpi-total">
@@ -285,7 +366,7 @@ textarea.form-input{resize:vertical;min-height:72px;}
 <div id="view-historial" class="view">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem">
     <div style="font-size:20px;font-weight:800">Historial de novedades</div>
-    <div style="display:flex;gap:.75rem">
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
       <button class="btn btn-ghost" style="font-size:11px" onclick="syncFromSheets()">↻ Sincronizar</button>
       <button class="btn btn-ghost" style="font-size:11px" onclick="exportCSV()">↓ Exportar CSV</button>
     </div>
@@ -402,7 +483,6 @@ async function loadMaestro() {
       if (plu) maestroMap[plu] = { descripcion: String(r[1]||'').trim(), fabricante: String(r[2]||'').trim(), precio: parsePrecio(r[3]) };
     });
     localStorage.setItem('maestro-cache', JSON.stringify(maestroMap));
-    // Re-trigger autocomplete if user already typed a PLU while maestro was loading
     const pluEl = document.getElementById('f-plu');
     if (pluEl && pluEl.value) { lastAutoFilledPLU = null; checkCruce(); }
   } catch(e) {
@@ -428,7 +508,6 @@ async function syncFromSheets() {
     const json = await res.json();
     const rows = json.values || [];
     if (rows.length < 2) {
-      // Sheet vacío — cargamos seed
       records = SEED.map((s,i) => ({...s, _id:'seed-'+i, _seed:true, _obs:'', _origen:'Histórico'}));
       saveLocal();
       setSyncStatus('online', 'Sheet vacío — mostrando datos históricos · ' + new Date().toLocaleTimeString('es-CO'));
@@ -452,9 +531,7 @@ async function syncFromSheets() {
       _obs: r[idx('OBSERVACION')] || ''
     })).filter(r => r.plu > 0);
 
-    // Merge: seed histórico + sheet
     const seedRecords = SEED.map((s,i) => ({...s, _id:'seed-'+i, _seed:true, _obs:'', _origen:'Histórico'}));
-    // Dedup: if sheet already has records, it's the source of truth for new ones
     records = sheetRecords.length > 0
       ? [...seedRecords, ...sheetRecords]
       : seedRecords;
@@ -465,7 +542,6 @@ async function syncFromSheets() {
     applyFilters();
     if (document.getElementById('view-historial').classList.contains('active')) renderHistorial();
   } catch(e) {
-    // Fallback to local
     setSyncStatus('error', 'Sin conexión — usando datos locales (' + e.message + ')');
     loadLocal();
     applyFilters();
@@ -492,7 +568,7 @@ async function writeToSheets(record) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-  return true; // no-cors always resolves
+  return true;
 }
 
 /* ========== LOCAL STORAGE ========== */
@@ -541,7 +617,6 @@ function applyFilters() {
   const desde = document.getElementById('fil-desde').value;
   const hasta = document.getElementById('fil-hasta').value;
 
-  // Periodo "7" or "30" = últimos N días
   let perStart = null;
   if (per === '7' || per === '30') {
     const d = new Date(); d.setDate(d.getDate() - parseInt(per));
@@ -551,7 +626,6 @@ function applyFilters() {
   const data = records.filter(r => {
     if (plu && !String(r.plu).includes(plu)) return false;
     if (fab && r.fabricante !== fab) return false;
-    // Date range overrides periodo
     if (desde || hasta) {
       if (desde && r.fecha < desde) return false;
       if (hasta && r.fecha > hasta) return false;
@@ -560,7 +634,6 @@ function applyFilters() {
     } else if (per) {
       if (!r.fecha.startsWith(per)) return false;
     }
-    // Cross-filters from chart clicks
     if (chartFilters.fabricante && r.fabricante !== chartFilters.fabricante) return false;
     if (chartFilters.estado && r.estado !== chartFilters.estado) return false;
     if (chartFilters.descripcion && r.descripcion !== chartFilters.descripcion) return false;
@@ -846,7 +919,6 @@ function checkCruce() {
   const plu = parseInt(document.getElementById('f-plu').value) || null;
   const pos = document.getElementById('f-posicion').value.trim().toUpperCase();
 
-  // Re-fill auto fields only when PLU actually changes
   if (plu !== lastAutoFilledPLU) {
     lastAutoFilledPLU = plu;
     document.getElementById('f-descripcion').value = '';
@@ -903,11 +975,9 @@ async function guardar() {
   btn.innerHTML = '<span class="spinner"></span> Guardando...';
   st.textContent = '';
 
-  // Save local immediately
   records.push(record);
   saveLocal();
 
-  // Write to Sheets
   try {
     await writeToSheets(record);
     st.style.color = 'var(--green)';
@@ -976,7 +1046,7 @@ function exportCSV() {
   const cols=['PLU','Descripcion','Posicion','Unidades','Fabricante','Estado','Fecha','CostoUnitario','CostoIncidencia','Observacion'];
   const rows=records.map(r=>[r.plu,r.descripcion,r.posicion,r.unidades,r.fabricante,r.estado,r.fecha,r.costoUnitario,r.costoIncidencia,r._obs||''].join(';'));
   const a=document.createElement('a');
-  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent([cols.join(';'),...rows].join('\n'));
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent([cols.join(';'),...rows].join('\n'));
   a.download='novedades-muebles-'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
 }
@@ -995,8 +1065,8 @@ loadLocal();
 renderDashboard(records);
 loadMaestro();
 syncFromSheets();
-setInterval(syncFromSheets, 60000); // auto-sync cada 60s
-setInterval(loadMaestro, 300000); // refresh maestro cada 5 min
+setInterval(syncFromSheets, 60000);
+setInterval(loadMaestro, 300000);
 </script>
 </body>
 </html>

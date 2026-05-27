@@ -306,6 +306,9 @@ async function loadMaestro() {
       if (plu) maestroMap[plu] = { descripcion: String(r[1]||'').trim(), fabricante: String(r[2]||'').trim(), precio: parsePrecio(r[3]) };
     });
     localStorage.setItem('maestro-cache', JSON.stringify(maestroMap));
+    // Re-trigger autocomplete if user already typed a PLU while maestro was loading
+    const pluEl = document.getElementById('f-plu');
+    if (pluEl && pluEl.value) { lastAutoFilledPLU = null; checkCruce(); }
   } catch(e) {
     const c = localStorage.getItem('maestro-cache');
     if (c) maestroMap = JSON.parse(c);

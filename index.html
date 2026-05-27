@@ -303,7 +303,7 @@ async function loadMaestro() {
     if (rows.length < 2) return;
     rows.slice(1).forEach(r => {
       const plu = String(r[0]).trim();
-      if (plu) maestroMap[plu] = { descripcion: String(r[1]||'').trim(), fabricante: String(r[2]||'').trim(), precio: parseInt(r[3])||0 };
+      if (plu) maestroMap[plu] = { descripcion: String(r[1]||'').trim(), fabricante: String(r[2]||'').trim(), precio: parsePrecio(r[3]) };
     });
     localStorage.setItem('maestro-cache', JSON.stringify(maestroMap));
   } catch(e) {
@@ -405,6 +405,7 @@ function loadLocal() {
 }
 
 /* ========== UTILS ========== */
+const parsePrecio = v => parseInt(String(v||'').replace(/[^0-9]/g,'')) || 0;
 const COP = v => '$' + Math.abs(Math.round(v)).toLocaleString('es-CO');
 const fmtCOP = v => (v<0?'-':'')+COP(v);
 const trunc = (s,n) => s && s.length>n ? s.slice(0,n)+'...' : (s||'');
@@ -570,6 +571,18 @@ function renderZonas(data) {
 }
 
 /* ========== FORM ========== */
+function setFabricanteField(value) {
+  const sel = document.getElementById('f-fabricante');
+  Array.from(sel.options).forEach(o => { if (o.dataset.dynamic) o.remove(); });
+  if (!value) { sel.value = ''; return; }
+  if (!Array.from(sel.options).some(o => o.value === value)) {
+    const opt = new Option(value, value);
+    opt.dataset.dynamic = '1';
+    sel.appendChild(opt);
+  }
+  sel.value = value;
+}
+
 function checkCruce() {
   const plu = parseInt(document.getElementById('f-plu').value) || null;
   const pos = document.getElementById('f-posicion').value.trim().toUpperCase();
@@ -584,13 +597,13 @@ function checkCruce() {
       const f = records.find(r => r.plu === plu);
       if (f) {
         document.getElementById('f-descripcion').value = f.descripcion || '';
-        document.getElementById('f-fabricante').value = f.fabricante || '';
+        setFabricanteField(f.fabricante || '');
         document.getElementById('f-costo').value = f.costoUnitario || '';
       } else {
         const m = lookupMaestro(plu);
         if (m) {
           document.getElementById('f-descripcion').value = m.descripcion || '';
-          document.getElementById('f-fabricante').value = m.fabricante || '';
+          setFabricanteField(m.fabricante || '');
           document.getElementById('f-costo').value = m.precio || '';
         }
       }
@@ -656,7 +669,7 @@ async function guardar() {
 
 function limpiarForm() {
   ['f-plu','f-posicion','f-descripcion','f-unidades','f-costo','f-obs'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('f-fabricante').value='';
+  setFabricanteField('');
   document.getElementById('f-estado').value='PENDIENTE';
   document.getElementById('alert-cruce').classList.remove('show');
   lastAutoFilledPLU = null;

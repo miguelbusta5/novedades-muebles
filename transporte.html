@@ -492,12 +492,18 @@ let editingId = null;
 let deletingId = null;
 let charts = {};
 
+// Tombstone: IDs eliminados localmente para que el sync no los vuelva a agregar
+let deletedIds = new Set(JSON.parse(localStorage.getItem('transport-deleted-v1') || '[]'));
+function saveDeletedIds() {
+  localStorage.setItem('transport-deleted-v1', JSON.stringify([...deletedIds]));
+}
+
 /* ========== STORAGE ========== */
 function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(guardados)); }
 function loadLocal() {
   const saved = localStorage.getItem(STORAGE_KEY);
   if (saved) {
-    guardados = JSON.parse(saved);
+    guardados = JSON.parse(saved).filter(g => !deletedIds.has(g._id));
   } else {
     guardados = SEED.map(s => ({...s}));
     saveLocal();
@@ -556,8 +562,19 @@ async function syncWithAPI() {
     const result = await res.json();
 
     if (result.success && result.data.length > 0) {
-      // API tiene datos → usarlos como fuente de verdad
-      guardados = result.data.map(mapFromAPI);
+      // API tiene datos → usarlos como fuente de verdad, excluyendo eliminados localmente
+      guardados = result.data.map(mapFromAPI).filter(g => !deletedIds.has(g._id));
+
+      // Reintentar DELETE para registros tombstoned que aún aparecen en la API
+      const pendingDeletes = result.data.filter(r => deletedIds.has(r.client_id));
+      for (const r of pendingDeletes) {
+        try {
+          const delRes = await deleteOne(r.client_id);
+          if (delRes.ok) deletedIds.delete(r.client_id); // confirmado eliminado
+        } catch(e) { /* reintentará en el próximo sync */ }
+      }
+      if (pendingDeletes.length > 0) saveDeletedIds();
+
     } else {
       // API vacía → subir todos los datos locales (primera sincronización)
       setSyncStatus('syncing', 'Subiendo datos al servidor...');
@@ -568,21 +585,24 @@ async function syncWithAPI() {
       });
       const bulkRes = await bulk.json();
       if (bulkRes.success) {
-        guardados = bulkRes.data.map(mapFromAPI);
+        guardados = bulkRes.data.map(mapFromAPI).filter(g => !deletedIds.has(g._id));
       }
     }
 
     // Detectar registros creados offline (en localStorage pero no en API)
     const apiIds = new Set(guardados.map(g => g._id));
     const localData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const offlineNew = localData.filter(g => !apiIds.has(g._id) && !g._id.startsWith('s'));
+    const offlineNew = localData.filter(g =>
+      !apiIds.has(g._id) &&
+      !g._id.startsWith('s') &&
+      !deletedIds.has(g._id)   // ← no re-subir registros eliminados
+    );
     if (offlineNew.length > 0) {
       setSyncStatus('syncing', `Subiendo ${offlineNew.length} registro(s) offline...`);
       await Promise.all(offlineNew.map(pushOne));
-      // Re-fetch para incluir los nuevos
       const res2 = await fetch(API_TRANSPORTE);
       const r2 = await res2.json();
-      if (r2.success) guardados = r2.data.map(mapFromAPI);
+      if (r2.success) guardados = r2.data.map(mapFromAPI).filter(g => !deletedIds.has(g._id));
     }
 
     saveLocal();
@@ -1149,13 +1169,17 @@ function confirmDelete() {
     return;
   }
   const idToDelete = deletingId;
+  // Añadir al tombstone ANTES de remover localmente
+  // Así el sync nunca puede volver a agregar este registro
+  deletedIds.add(idToDelete);
+  saveDeletedIds();
   guardados = guardados.filter(g => g._id !== idToDelete);
   saveLocal();
   cancelDelete();
   showToast('Registro eliminado', false, true);
   renderDashboard();
   if (document.getElementById('view-lista').classList.contains('active')) renderLista();
-  // Eliminar de la API
+  // Intentar eliminar de la API (si falla, el sync lo reintentará)
   deleteOne(idToDelete).catch(() => {});
 }
 

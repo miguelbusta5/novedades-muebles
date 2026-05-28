@@ -174,6 +174,14 @@ textarea.form-input{resize:vertical;min-height:72px;}
   .nav-brand span{display:none;}
   .nav-tab{font-size:9px;padding:.6rem .5rem;}
 }
+
+/* SYNC BAR */
+.sync-bar{display:flex;align-items:center;gap:.6rem;padding:.5rem 1.5rem;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.sync-dot.online{background:var(--green);}
+.sync-dot.syncing{background:var(--amber);animation:pulse .8s infinite;}
+.sync-dot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 </style>
 </head>
 <body>
@@ -187,6 +195,12 @@ textarea.form-input{resize:vertical;min-height:72px;}
   </div>
   <a href="index.html" class="back-link">← Pantalla principal</a>
 </nav>
+
+<div class="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-msg">Conectando con servidor...</span>
+  <span style="margin-left:auto;cursor:pointer;color:var(--accent);font-weight:700" onclick="syncWithAPI()">↻ Sincronizar</span>
+</div>
 
 <!-- ======== DASHBOARD ======== -->
 <div id="view-dashboard" class="view active">
@@ -438,8 +452,9 @@ textarea.form-input{resize:vertical;min-height:72px;}
 
 <script>
 /* ========== CONSTANTES ========== */
-const STORAGE_KEY = 'transport-guardados-v1';
-const DELETE_PIN = '0000'; // ← Cambia a tu PIN secreto
+const STORAGE_KEY   = 'transport-guardados-v1';
+const DELETE_PIN    = '0000'; // ← Cambia a tu PIN secreto
+const API_TRANSPORTE = 'https://novedades-api-production.up.railway.app/api/transporte';
 
 /* ========== SEED (datos históricos del CSV) ========== */
 const SEED = [
@@ -486,6 +501,99 @@ function loadLocal() {
   } else {
     guardados = SEED.map(s => ({...s}));
     saveLocal();
+  }
+}
+
+/* ========== SYNC STATUS ========== */
+function setSyncStatus(state, msg) {
+  document.getElementById('sync-dot').className = 'sync-dot ' + state;
+  document.getElementById('sync-msg').textContent = msg;
+}
+
+/* ========== API HELPERS ========== */
+function mapFromAPI(r) {
+  return {
+    _id:          r.client_id,
+    fecha:        r.fecha        ? String(r.fecha).slice(0,10)         : '',
+    documento:    r.documento,
+    ubicacion:    r.ubicacion,
+    estado:       r.estado,
+    fechaDespacho:r.fecha_despacho ? String(r.fecha_despacho).slice(0,10) : '',
+    nota:         r.nota || ''
+  };
+}
+
+function mapToAPI(g) {
+  return {
+    client_id:     g._id,
+    fecha:         g.fecha,
+    documento:     g.documento,
+    ubicacion:     g.ubicacion,
+    estado:        g.estado,
+    fecha_despacho:g.fechaDespacho || null,
+    nota:          g.nota || ''
+  };
+}
+
+async function pushOne(g) {
+  return fetch(API_TRANSPORTE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(mapToAPI(g))
+  });
+}
+
+async function deleteOne(id) {
+  return fetch(`${API_TRANSPORTE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+/* ========== SYNC WITH API ========== */
+async function syncWithAPI() {
+  setSyncStatus('syncing', 'Sincronizando...');
+  try {
+    const res = await fetch(API_TRANSPORTE);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const result = await res.json();
+
+    if (result.success && result.data.length > 0) {
+      // API tiene datos → usarlos como fuente de verdad
+      guardados = result.data.map(mapFromAPI);
+    } else {
+      // API vacía → subir todos los datos locales (primera sincronización)
+      setSyncStatus('syncing', 'Subiendo datos al servidor...');
+      const bulk = await fetch(API_TRANSPORTE + '/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ records: guardados.map(mapToAPI) })
+      });
+      const bulkRes = await bulk.json();
+      if (bulkRes.success) {
+        guardados = bulkRes.data.map(mapFromAPI);
+      }
+    }
+
+    // Detectar registros creados offline (en localStorage pero no en API)
+    const apiIds = new Set(guardados.map(g => g._id));
+    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const offlineNew = localData.filter(g => !apiIds.has(g._id) && !g._id.startsWith('s'));
+    if (offlineNew.length > 0) {
+      setSyncStatus('syncing', `Subiendo ${offlineNew.length} registro(s) offline...`);
+      await Promise.all(offlineNew.map(pushOne));
+      // Re-fetch para incluir los nuevos
+      const res2 = await fetch(API_TRANSPORTE);
+      const r2 = await res2.json();
+      if (r2.success) guardados = r2.data.map(mapFromAPI);
+    }
+
+    saveLocal();
+    setSyncStatus('online', `${guardados.length} guardados · ${new Date().toLocaleTimeString('es-CO')}`);
+    renderDashboard();
+    if (document.getElementById('view-lista').classList.contains('active')) renderLista();
+  } catch (e) {
+    console.error('Sync error:', e);
+    setSyncStatus('error', 'Sin conexión — mostrando datos locales');
+    loadLocal(); // fallback
+    renderDashboard();
   }
 }
 
@@ -933,6 +1041,8 @@ function guardar() {
   limpiarForm();
   showToast('Guardado registrado ✓');
   renderDashboard();
+  // Subir a la API en segundo plano
+  pushOne(nuevo).catch(() => {});
 }
 
 function limpiarForm() {
@@ -1005,6 +1115,8 @@ function saveEdit() {
   showToast('Guardado actualizado ✓');
   renderDashboard();
   if (document.getElementById('view-lista').classList.contains('active')) renderLista();
+  // Subir cambio a la API
+  pushOne(guardados[idx]).catch(() => {});
 }
 
 function marcarDespachado() {
@@ -1036,12 +1148,15 @@ function confirmDelete() {
     document.getElementById('modal-pin-err').style.display = 'block';
     return;
   }
-  guardados = guardados.filter(g => g._id !== deletingId);
+  const idToDelete = deletingId;
+  guardados = guardados.filter(g => g._id !== idToDelete);
   saveLocal();
   cancelDelete();
   showToast('Registro eliminado', false, true);
   renderDashboard();
   if (document.getElementById('view-lista').classList.contains('active')) renderLista();
+  // Eliminar de la API
+  deleteOne(idToDelete).catch(() => {});
 }
 
 /* ========== EXPORT ========== */
@@ -1127,11 +1242,12 @@ function showToast(msg, err = false, warn = false) {
 }
 
 /* ========== INIT ========== */
-loadLocal();
+loadLocal();          // carga local inmediata para no mostrar pantalla vacía
 setDefaultFecha();
-renderDashboard();
-// Notificaciones al cargar (con pequeño delay para que el DOM esté listo)
-setTimeout(checkNotifications, 800);
+renderDashboard();    // render rápido con datos locales
+syncWithAPI();        // luego sincroniza con el servidor y actualiza
+setTimeout(checkNotifications, 1500);
+setInterval(syncWithAPI, 60000); // auto-sync cada 60 segundos
 </script>
 </body>
 </html>

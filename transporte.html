@@ -48,6 +48,8 @@ select.filter-input option{background:var(--surface);}
 .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;border-left:3px solid var(--accent);box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;}
 .kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
 .kpi-card.amber{border-left-color:var(--amber);}.kpi-card.green{border-left-color:var(--green);}.kpi-card.red{border-left-color:var(--red);}.kpi-card.orange{border-left-color:var(--accent);}
+.kpi-card.proxima{border-left-color:var(--amber);border:2px solid var(--amber);animation:ring-pulse 1.8s infinite;}
+@keyframes ring-pulse{0%,100%{box-shadow:0 0 0 0 #f59e0b44}50%{box-shadow:0 0 0 8px #f59e0b00}}
 .kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
 .kpi-val{font-size:24px;font-weight:800;font-family:var(--mono);}
 .kpi-val.orange{color:var(--accent);}.kpi-val.amber{color:var(--amber);}.kpi-val.green{color:var(--green);}.kpi-val.red{color:var(--red);}
@@ -217,6 +219,7 @@ textarea.form-input{resize:vertical;min-height:72px;}
     <div class="kpi-card orange"><div class="kpi-lbl">Total guardados</div><div class="kpi-val orange" id="kpi-total">—</div></div>
     <div class="kpi-card amber"><div class="kpi-lbl">Pendiente despacho</div><div class="kpi-val amber" id="kpi-pendiente">—</div></div>
     <div class="kpi-card green"><div class="kpi-lbl">Despachados</div><div class="kpi-val green" id="kpi-despachado">—</div></div>
+    <div class="kpi-card" id="kpi-card-proximas"><div class="kpi-lbl">🔔 Próximos 5 días</div><div class="kpi-val amber" id="kpi-proximas">—</div></div>
     <div class="kpi-card red"><div class="kpi-lbl">Entregas vencidas</div><div class="kpi-val red" id="kpi-vencidas">—</div></div>
   </div>
 
@@ -486,7 +489,7 @@ function urgencia(g) {
   const dias = new Date(today()) - new Date(entrega);
   const dNum = Math.floor(dias / 86400000);
   if (dNum > 0) return { tipo: 'vencida', dias: dNum, entrega };
-  if (dNum >= -3) return { tipo: 'proxima', dias: -dNum, entrega };
+  if (dNum >= -5) return { tipo: 'proxima', dias: -dNum, entrega };  // alerta 5 días
   return { tipo: 'ok', dias: -dNum, entrega };
 }
 function estadoBadge(estado) {
@@ -539,12 +542,17 @@ function renderDashboard() {
   const pendientes = data.filter(g => g.estado === 'PENDIENTE DESPACHO');
   const despachados = data.filter(g => g.estado === 'DESPACHADO');
   const vencidas = pendientes.filter(g => { const u = urgencia(g); return u && u.tipo === 'vencida'; });
+  const proximas = pendientes.filter(g => { const u = urgencia(g); return u && u.tipo === 'proxima'; });
 
   document.getElementById('kpi-total-val').textContent = total;
   document.getElementById('kpi-total').textContent = total;
   document.getElementById('kpi-pendiente').textContent = pendientes.length;
   document.getElementById('kpi-despachado').textContent = despachados.length;
   document.getElementById('kpi-vencidas').textContent = vencidas.length;
+  document.getElementById('kpi-proximas').textContent = proximas.length;
+  // Pulsar el KPI solo si hay próximas
+  const kpiCard = document.getElementById('kpi-card-proximas');
+  kpiCard.className = 'kpi-card ' + (proximas.length > 0 ? 'proxima' : '');
 
   const pct = total ? Math.round(despachados.length / total * 100) : 0;
   document.getElementById('dash-sub').textContent =
@@ -846,6 +854,59 @@ function exportCSV() {
   showToast('CSV exportado ✓');
 }
 
+/* ========== NOTIFICACIONES 5 DÍAS ========== */
+async function checkNotifications() {
+  if (!('Notification' in window)) return;
+
+  // Pedir permiso si está en 'default'
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+  if (Notification.permission !== 'granted') return;
+
+  // Evitar disparar más de una vez por día
+  const dateKey = 'transport-notif-' + today();
+  if (localStorage.getItem(dateKey)) return;
+
+  const items = guardados.filter(g => {
+    const u = urgencia(g);
+    return u && (u.tipo === 'proxima' || u.tipo === 'vencida');
+  });
+
+  if (items.length === 0) return;
+
+  localStorage.setItem(dateKey, '1');
+
+  // Agrupar en una sola notificación si hay varios
+  if (items.length === 1) {
+    const g = items[0];
+    const u = urgencia(g);
+    const esVencida = u.tipo === 'vencida';
+    new Notification(
+      esVencida ? `⚠ Entrega vencida: ${g.documento}` : `🔔 Entrega en ${u.dias} día${u.dias > 1 ? 's' : ''}: ${g.documento}`,
+      { body: `Ubicación: ${g.ubicacion}\n${g.nota || ''}`, tag: 'transporte-alerta' }
+    );
+  } else {
+    const vencidas = items.filter(g => urgencia(g)?.tipo === 'vencida');
+    const proximas = items.filter(g => urgencia(g)?.tipo === 'proxima');
+    let body = '';
+    if (vencidas.length) body += `⚠ Vencidas: ${vencidas.map(g => g.documento).join(', ')}\n`;
+    if (proximas.length) body += `🔔 Próximas (≤5 días): ${proximas.map(g => g.documento).join(', ')}`;
+    new Notification(`Transporte — ${items.length} guardados requieren atención`, {
+      body: body.trim(),
+      tag: 'transporte-alerta'
+    });
+  }
+
+  // También mostrar un toast visible en la app
+  const proximasCnt = items.filter(g => urgencia(g)?.tipo === 'proxima').length;
+  const vencidasCnt = items.filter(g => urgencia(g)?.tipo === 'vencida').length;
+  const partes = [];
+  if (vencidasCnt) partes.push(`${vencidasCnt} vencida${vencidasCnt > 1 ? 's' : ''}`);
+  if (proximasCnt) partes.push(`${proximasCnt} próxima${proximasCnt > 1 ? 's' : ''} (≤5 días)`);
+  showToast(`🔔 Alertas de entrega: ${partes.join(' · ')}`, false, true);
+}
+
 /* ========== TOAST ========== */
 function showToast(msg, err = false, warn = false) {
   const t = document.getElementById('toast');
@@ -859,6 +920,8 @@ function showToast(msg, err = false, warn = false) {
 loadLocal();
 setDefaultFecha();
 renderDashboard();
+// Notificaciones al cargar (con pequeño delay para que el DOM esté listo)
+setTimeout(checkNotifications, 800);
 </script>
 </body>
 </html>

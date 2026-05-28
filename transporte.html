@@ -111,6 +111,20 @@ textarea.form-input{resize:vertical;min-height:72px;}
 .urgencia-vencida td{color:#b91c1c;}
 .urgencia-proxima{background:#fffbeb !important;}
 
+/* Almacenaje */
+.alm-cell{display:flex;flex-direction:column;gap:2px;}
+.alm-cost{font-size:13px;font-weight:800;font-family:var(--mono);}
+.alm-cost.gracia{color:var(--green);}
+.alm-cost.periodo{color:var(--amber);}
+.alm-cost.cobro{color:var(--accent);}
+.alm-cost.cerrado-gracia{color:var(--green);}
+.alm-cost.cerrado-cobro{color:var(--muted2);}
+.alm-sub{font-size:10px;color:var(--muted);font-family:var(--mono);white-space:nowrap;}
+.alm-row{display:flex;align-items:center;gap:.6rem;padding:.5rem .5rem;border-bottom:1px solid var(--border);font-size:12px;}
+.alm-row:last-child{border-bottom:none;}
+.alm-total-bar{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1rem;background:var(--surface2);border-radius:10px;margin-top:.75rem;font-size:13px;font-weight:700;}
+.alm-empty{font-size:13px;color:var(--muted);padding:.5rem;text-align:center;}
+
 .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#ffffff;padding:.75rem 1.75rem;border-radius:8px;font-size:13px;font-weight:700;transition:transform .3s ease;z-index:999;white-space:nowrap;box-shadow:0 4px 14px #10b98155;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 .toast.err{background:var(--red);box-shadow:0 4px 14px #ef444455;}
@@ -221,6 +235,7 @@ textarea.form-input{resize:vertical;min-height:72px;}
     <div class="kpi-card green"><div class="kpi-lbl">Despachados</div><div class="kpi-val green" id="kpi-despachado">—</div></div>
     <div class="kpi-card" id="kpi-card-proximas"><div class="kpi-lbl">🔔 Próximos 5 días</div><div class="kpi-val amber" id="kpi-proximas">—</div></div>
     <div class="kpi-card red"><div class="kpi-lbl">Entregas vencidas</div><div class="kpi-val red" id="kpi-vencidas">—</div></div>
+    <div class="kpi-card orange"><div class="kpi-lbl">💰 Costo almacenaje</div><div class="kpi-val orange" id="kpi-alm-total" style="font-size:16px">—</div></div>
   </div>
 
   <div class="grid-5-3">
@@ -237,6 +252,12 @@ textarea.form-input{resize:vertical;min-height:72px;}
   <div class="alert-strip">
     <div class="card-title red" style="margin-bottom:.75rem">Alertas de entrega — guardados pendientes con fecha comprometida</div>
     <div id="alertas-content"></div>
+  </div>
+
+  <div class="alert-strip" style="margin-top:1rem">
+    <div class="card-title orange" style="margin-bottom:.75rem">Cobros de almacenaje — estado por guardado</div>
+    <div id="almacenaje-content"></div>
+    <div id="almacenaje-total"></div>
   </div>
 </div>
 
@@ -331,6 +352,7 @@ textarea.form-input{resize:vertical;min-height:72px;}
           <th>Ubicación</th>
           <th>Estado</th>
           <th>Fecha despacho</th>
+          <th>Almacenaje</th>
           <th>Entrega</th>
           <th>Nota</th>
           <th></th>
@@ -383,6 +405,10 @@ textarea.form-input{resize:vertical;min-height:72px;}
         <label class="form-label">Nota</label>
         <textarea class="form-input" id="me-nota" rows="2"></textarea>
       </div>
+    </div>
+    <div id="modal-alm-info" style="background:var(--surface2);border-radius:10px;padding:.75rem 1rem;margin-top:.5rem;font-size:12px;display:none">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.4rem">Costo de almacenaje</div>
+      <div id="modal-alm-detail" style="font-family:var(--mono)"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="saveEdit()">Guardar cambios</button>
@@ -497,6 +523,100 @@ function estadoBadge(estado) {
   return '<span class="badge badge-amber">Pendiente despacho</span>';
 }
 
+/* ========== ALMACENAJE ========== */
+const TARIFA_ALM = 150000;
+function fmtCOP(n) {
+  if (n === 0) return '$0';
+  return '$' + n.toLocaleString('es-CO');
+}
+function addMonths(date, n) {
+  const d = new Date(date);
+  d.setMonth(d.getMonth() + n);
+  return d;
+}
+/**
+ * Calcula el estado de almacenaje de un guardado.
+ * endDate: fecha tope (ISO). Si no se indica, usa hoy.
+ * Para ítems DESPACHADOS, pasar g.fechaDespacho como endDate.
+ */
+function calcAlmacenaje(g, endDate) {
+  const inicio   = new Date(g.fecha + 'T00:00:00');
+  const fin      = new Date((endDate || today()) + 'T00:00:00');
+  const finGracia = addMonths(inicio, 1);
+
+  if (fin <= finGracia) {
+    const diasRestantes = Math.ceil((finGracia - fin) / 86400000);
+    return {
+      fase: 'gracia', meses: 0, costo: 0,
+      diasRestantes,
+      finGracia: finGracia.toISOString().slice(0,10)
+    };
+  }
+
+  // Contar meses completos de cobro
+  let m = 0;
+  while (addMonths(finGracia, m + 1) <= fin) m++;
+
+  const inicioMesActual   = addMonths(finGracia, m);
+  const finMesActual      = addMonths(finGracia, m + 1);
+  const diasEnPeriodo     = Math.floor((fin - inicioMesActual) / 86400000);
+  const diasHastaProxima  = Math.ceil((finMesActual - fin) / 86400000);
+
+  return {
+    fase: 'cobro', meses: m, costo: m * TARIFA_ALM,
+    diasEnPeriodo,
+    diasHastaProxima,
+    costoProximo: (m + 1) * TARIFA_ALM,
+    finGracia: finGracia.toISOString().slice(0,10),
+    proximaCarga: finMesActual.toISOString().slice(0,10)
+  };
+}
+
+/** HTML compacto para la celda de almacenaje en la tabla lista */
+function almCeldaHTML(g) {
+  const esDesp = g.estado === 'DESPACHADO';
+  const alm = esDesp && g.fechaDespacho
+    ? calcAlmacenaje(g, g.fechaDespacho)
+    : calcAlmacenaje(g);
+
+  if (alm.fase === 'gracia') {
+    const sub = esDesp
+      ? 'Despachado en gracia'
+      : `Vence en ${alm.diasRestantes} día${alm.diasRestantes !== 1 ? 's' : ''} · fin ${fmtFecha(alm.finGracia)}`;
+    const cls = esDesp ? 'cerrado-gracia' : 'gracia';
+    return `<div class="alm-cell">
+      <span class="alm-cost ${cls}">EN GRACIA</span>
+      <span class="alm-sub">${sub}</span>
+    </div>`;
+  }
+
+  // Fase cobro
+  const costoStr = fmtCOP(alm.costo);
+  let cls, sub;
+  if (esDesp) {
+    cls = alm.costo > 0 ? 'cerrado-cobro' : 'cerrado-gracia';
+    sub = alm.costo > 0
+      ? `${alm.meses} mes${alm.meses !== 1 ? 'es' : ''} de cobro al despacho`
+      : 'Despachado en gracia';
+  } else if (alm.meses === 0) {
+    // Pasó la gracia pero aún no completa el primer mes de cobro
+    cls = 'periodo';
+    sub = `Día ${alm.diasEnPeriodo} de 30 · primer cobro en ${alm.diasHastaProxima}d`;
+    return `<div class="alm-cell">
+      <span class="alm-cost ${cls}">DÍA ${alm.diasEnPeriodo}</span>
+      <span class="alm-sub">${sub}</span>
+    </div>`;
+  } else {
+    cls = 'cobro';
+    sub = `Mes ${alm.meses} · día ${alm.diasEnPeriodo} · próx. ${fmtCOP(alm.costoProximo)} en ${alm.diasHastaProxima}d`;
+  }
+
+  return `<div class="alm-cell">
+    <span class="alm-cost ${cls}">${costoStr}</span>
+    <span class="alm-sub">${sub}</span>
+  </div>`;
+}
+
 /* ========== VIEWS ========== */
 function showView(id, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -554,13 +674,78 @@ function renderDashboard() {
   const kpiCard = document.getElementById('kpi-card-proximas');
   kpiCard.className = 'kpi-card ' + (proximas.length > 0 ? 'proxima' : '');
 
+  // KPI almacenaje — solo pendientes (acumulado activo)
+  const totalAlm = pendientes.reduce((sum, g) => sum + calcAlmacenaje(g).costo, 0);
+  document.getElementById('kpi-alm-total').textContent = fmtCOP(totalAlm);
+
   const pct = total ? Math.round(despachados.length / total * 100) : 0;
   document.getElementById('dash-sub').textContent =
     `${total} guardados · ${pct}% tasa de despacho · actualizado ${new Date().toLocaleTimeString('es-CO')}`;
 
   renderBarChart(data);
   renderDonutChart(pendientes.length, despachados.length);
-  renderAlertas(guardados); // alertas siempre del total
+  renderAlertas(guardados);     // alertas siempre del total
+  renderAlmacenaje(guardados);  // cobros siempre del total
+}
+
+function renderAlmacenaje(data) {
+  const TARIFA = 150000;
+  // Mostrar todos los pendientes ordenados: con cobro primero, luego período, luego gracia
+  const pendientes = data.filter(g => g.estado === 'PENDIENTE DESPACHO');
+  pendientes.sort((a, b) => {
+    const ca = calcAlmacenaje(a).costo;
+    const cb = calcAlmacenaje(b).costo;
+    if (cb !== ca) return cb - ca;
+    return a.fecha.localeCompare(b.fecha);
+  });
+
+  const container = document.getElementById('almacenaje-content');
+  const totalEl   = document.getElementById('almacenaje-total');
+
+  if (pendientes.length === 0) {
+    container.innerHTML = '<div class="alm-empty">Sin guardados pendientes</div>';
+    totalEl.innerHTML = '';
+    return;
+  }
+
+  let totalActivo = 0;
+  let totalProximo = 0;
+
+  container.innerHTML = pendientes.map(g => {
+    const alm = calcAlmacenaje(g);
+    totalActivo  += alm.costo;
+    totalProximo += alm.fase === 'cobro' ? alm.costoProximo : (alm.costo + TARIFA);
+
+    let dotColor, info, costoHTML;
+    if (alm.fase === 'gracia') {
+      dotColor = 'var(--green)';
+      costoHTML = `<span style="font-weight:800;color:var(--green);font-family:var(--mono)">EN GRACIA</span>`;
+      info = `Gracia vence ${fmtFecha(alm.finGracia)} · faltan ${alm.diasRestantes} día${alm.diasRestantes !== 1 ? 's' : ''}`;
+    } else if (alm.meses === 0) {
+      dotColor = 'var(--amber)';
+      costoHTML = `<span style="font-weight:800;color:var(--amber);font-family:var(--mono)">DÍA ${alm.diasEnPeriodo} / 30</span>`;
+      info = `Primer cobro ${fmtCOP(TARIFA)} en ${alm.diasHastaProxima} día${alm.diasHastaProxima !== 1 ? 's' : ''} (${fmtFecha(alm.proximaCarga)})`;
+    } else {
+      dotColor = 'var(--accent)';
+      costoHTML = `<span style="font-weight:800;color:var(--accent);font-family:var(--mono)">${fmtCOP(alm.costo)}</span>`;
+      info = `Mes ${alm.meses} · día ${alm.diasEnPeriodo} · próx. cobro ${fmtCOP(alm.costoProximo)} en ${alm.diasHastaProxima}d (${fmtFecha(alm.proximaCarga)})`;
+    }
+
+    return `<div class="alm-row">
+      <div class="alert-dot" style="background:${dotColor}"></div>
+      <span style="font-family:var(--mono);font-weight:600;min-width:130px">${g.documento}</span>
+      <span style="font-size:11px;color:var(--muted2);min-width:160px">${g.ubicacion}</span>
+      <span style="font-size:11px;color:var(--muted);flex:1">${info}</span>
+      ${costoHTML}
+      <button class="btn-icon ok" onclick="openEdit('${g._id}')" title="Editar">✏</button>
+    </div>`;
+  }).join('');
+
+  totalEl.innerHTML = `<div class="alm-total-bar">
+    <span>Total cobros acumulados (activo)</span>
+    <span style="font-family:var(--mono);color:var(--accent)">${fmtCOP(totalActivo)}</span>
+    <span style="color:var(--muted);font-weight:400;font-size:12px">Próx. total proyectado: <strong>${fmtCOP(totalProximo)}</strong></span>
+  </div>`;
 }
 
 function renderBarChart(data) {
@@ -685,6 +870,7 @@ function renderLista() {
       <td style="font-size:11px">${g.ubicacion}</td>
       <td>${estadoBadge(g.estado)}</td>
       <td>${g.fechaDespacho ? fmtFecha(g.fechaDespacho) : '—'}</td>
+      <td>${almCeldaHTML(g)}</td>
       <td>${urgBadge}</td>
       <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted)">${g.nota || '—'}</td>
       <td>
@@ -773,6 +959,30 @@ function openEdit(id) {
   document.getElementById('me-nota').value = g.nota || '';
   const grp = document.getElementById('me-fdesp-grp');
   grp.style.display = g.estado === 'DESPACHADO' ? 'flex' : 'none';
+
+  // Mostrar info de almacenaje en el modal
+  const almDiv  = document.getElementById('modal-alm-info');
+  const almDet  = document.getElementById('modal-alm-detail');
+  const alm = g.estado === 'DESPACHADO' && g.fechaDespacho
+    ? calcAlmacenaje(g, g.fechaDespacho)
+    : calcAlmacenaje(g);
+  almDiv.style.display = 'block';
+  if (alm.fase === 'gracia') {
+    const msg = g.estado === 'DESPACHADO'
+      ? '✅ Despachado dentro del periodo de gracia — Sin cobro'
+      : `✅ En periodo de gracia · Vence el ${fmtFecha(alm.finGracia)} (${alm.diasRestantes} día${alm.diasRestantes !== 1 ? 's' : ''})`;
+    almDet.innerHTML = `<span style="color:var(--green)">${msg}</span>`;
+  } else if (alm.meses === 0) {
+    almDet.innerHTML = `<span style="color:var(--amber)">⏱ Día ${alm.diasEnPeriodo} del primer mes de cobro</span><br>
+      <span style="color:var(--muted)">Primer cobro: ${fmtCOP(TARIFA_ALM)} el ${fmtFecha(alm.proximaCarga)} (en ${alm.diasHastaProxima} días)</span>`;
+  } else {
+    const estado = g.estado === 'DESPACHADO' ? 'al despacho' : 'acumulado';
+    almDet.innerHTML = `<span style="color:var(--accent);font-size:15px;font-weight:800">${fmtCOP(alm.costo)}</span>
+      <span style="color:var(--muted)"> ${estado} · ${alm.meses} mes${alm.meses !== 1 ? 'es' : ''}</span>${
+      g.estado !== 'DESPACHADO'
+        ? `<br><span style="color:var(--muted)">Próx. cobro: ${fmtCOP(alm.costoProximo)} el ${fmtFecha(alm.proximaCarga)} (en ${alm.diasHastaProxima} días)</span>`
+        : ''}`;
+  }
   document.getElementById('modal-edit').style.display = 'flex';
 }
 

@@ -456,6 +456,7 @@ const SHEET_ID = '1v2rr7C237xMVqkq3N8FUHxxK4u-BGuUhjDeaoi5ehcs';
 const API_KEY  = 'AIzaSyCSPAj6qAhFXhYzJq5XRx_wI8fEVVvy19Y';
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxb4ZhO9SBscuyuQTvzBgVnjANvEC0fpK60bAxpHlbIISibuzX1AxQSiYYLGgWJz4sWnA/exec';
 const MAESTRO_URL = SCRIPT_URL + '?action=maestro';
+const API_BASE_URL = 'https://novedades-api-production.up.railway.app/api'; // REST API — autoritativo para estado
 const SHEET_NAME = 'MUEBLES';
 const READ_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
 const DELETE_PIN = '0000'; // ← Cambia este valor a tu PIN secreto de 4 dígitos
@@ -540,6 +541,25 @@ async function syncFromSheets() {
     records = records.filter(r => !deletedSet.has(fp(r)));
     // Aplicar ediciones locales sobre los datos de Sheets (evita que el sync pise cambios)
     records = records.map(r => { const e = localEdits[fp(r)]; return e ? {...r, ...e} : r; });
+
+    // NUEVO: Aplicar estados desde la API REST (solución definitiva al bug de reversión de estado)
+    try {
+      const apiRes = await fetch(`${API_BASE_URL}/novedades`);
+      if (apiRes.ok) {
+        const apiResult = await apiRes.json();
+        if (apiResult.success && apiResult.data.length > 0) {
+          const estadoMap = {};
+          apiResult.data.forEach(item => {
+            const key = `${item.plu}||${item.posicion}||${String(item.fecha).slice(0,10)}`;
+            estadoMap[key] = { estado: item.estado, _apiId: item.id };
+          });
+          records = records.map(r => {
+            const apiData = estadoMap[fp(r)];
+            return apiData ? {...r, estado: apiData.estado, _apiId: apiData._apiId} : r;
+          });
+        }
+      }
+    } catch(apiErr) { /* Si falla la API REST, se mantiene el estado de Sheets + localEdits */ }
 
     saveLocal();
     setSyncStatus('online', `Sincronizado · ${records.length} novedades · ${new Date().toLocaleTimeString('es-CO')}`);
@@ -897,7 +917,16 @@ function saveEditModal() {
     fabricante: r.fabricante, estado: r.estado, _obs: r._obs
   };
   persistEdits();
-  // Enviar actualización a Google Sheets
+  // NUEVO: Guardar en API REST (autoritativo para estado — soluciona el bug de reversión definitivamente)
+  fetch(`${API_BASE_URL}/novedades`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      plu: String(r.plu), posicion: origPosicion, fecha: r.fecha,
+      estado: r.estado, descripcion: r.descripcion, cantidad: r.unidades
+    })
+  }).catch(()=>{});
+  // También actualizar Google Sheets (para mantener compatibilidad)
   fetch(SCRIPT_URL, {
     method:'POST', mode:'no-cors',
     headers:{'Content-Type':'application/json'},
@@ -1003,6 +1032,16 @@ async function guardar() {
 
   records.push(record);
   saveLocal();
+
+  // NUEVO: Guardar en API REST (para que el estado persista en syncs futuros)
+  fetch(`${API_BASE_URL}/novedades`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      plu: String(record.plu), posicion: record.posicion, fecha: record.fecha,
+      estado: record.estado, descripcion: record.descripcion, cantidad: record.unidades
+    })
+  }).then(res => res.json()).then(result => { if (result.success) record._apiId = result.data.id; }).catch(()=>{});
 
   try {
     await writeToSheets(record);

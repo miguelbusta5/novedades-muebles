@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Novedades Muebles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f5f7fa;--surface:#ffffff;--surface2:#f1f5f9;--border:#e2e8f0;
+  --accent:#0ea5e9;--accent2:#6366f1;--green:#10b981;--red:#ef4444;
+  --amber:#f59e0b;--orange:#f97316;--text:#0f172a;--muted:#64748b;--muted2:#475569;
+  --shadow:0 1px 3px #0f172a14;--shadow-lg:0 4px 14px #0f172a1a;
+  --sans:'Syne',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:14px;}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+.nav-brand{font-size:14px;font-weight:800;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;padding:1rem 1.5rem 1rem 0;white-space:nowrap;border-right:1px solid var(--border);margin-right:1rem;}
+.nav-brand span{color:var(--muted2);font-weight:400;}
+.nav-tabs{display:flex;gap:0;flex:1;overflow-x:auto;}
+.nav-tab{padding:.9rem 1.2rem;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.nav-tab:hover{color:var(--text);}
+
+/* SYNC STATUS */
+.sync-bar{display:flex;align-items:center;gap:.6rem;padding:.5rem 1.5rem;background:var(--surface2);border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;}
+.sync-dot.online{background:var(--green);}
+.sync-dot.syncing{background:var(--amber);animation:pulse .8s infinite;}
+.sync-dot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.view{display:none;padding:1.5rem;max-width:1400px;margin:0 auto;}
+.view.active{display:block;}
+.dash-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;}
+.dash-title{font-size:22px;font-weight:800;letter-spacing:-.01em;}
+.dash-sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:400;}
+
+.filter-bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;box-shadow:var(--shadow);}
+.filter-bar label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0;}
+.filter-input{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.45rem .85rem;font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s,box-shadow .15s;min-width:130px;}
+.filter-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #0ea5e924;}
+select.filter-input option{background:var(--surface);}
+.kpi-total{margin-left:auto;background:var(--accent);color:#ffffff;border-radius:10px;padding:.5rem 1.2rem;text-align:center;box-shadow:0 2px 6px #0ea5e955;}
+.kpi-total-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
+.kpi-total-val{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1;}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;border-left:3px solid var(--accent);box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.kpi-card.amber{border-left-color:var(--amber);}.kpi-card.green{border-left-color:var(--green);}.kpi-card.red{border-left-color:var(--red);}.kpi-card.purple{border-left-color:var(--accent2);}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.kpi-val{font-size:24px;font-weight:800;font-family:var(--mono);}
+.kpi-val.blue{color:var(--accent);}.kpi-val.amber{color:var(--amber);}.kpi-val.green{color:var(--green);}.kpi-val.red{color:var(--red);}.kpi-val.purple{color:var(--accent2);}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.grid-5-3{display:grid;grid-template-columns:5fr 3fr;gap:1rem;margin-bottom:1rem;}
+.grid-4-6{display:grid;grid-template-columns:4fr 6fr;gap:1rem;margin-bottom:1rem;}
+@media(max-width:900px){.grid-2,.grid-3,.grid-5-3,.grid-4-6{grid-template-columns:1fr;}}
+
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;box-shadow:var(--shadow);transition:box-shadow .2s,transform .15s;}
+.chart-card:hover{box-shadow:var(--shadow-lg);}
+.card-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+.card-title::before{content:'';display:inline-block;width:3px;height:14px;border-radius:2px;background:var(--accent);}
+.card-title.amber::before{background:var(--amber);}.card-title.green::before{background:var(--green);}.card-title.purple::before{background:var(--accent2);}.card-title.red::before{background:var(--red);}.card-title.orange::before{background:var(--orange);}
+.chart-wrap{position:relative;}
+
+.rank-table{width:100%;border-collapse:collapse;font-size:12px;}
+.rank-table thead tr{border-bottom:1px solid var(--border);}
+.rank-table th{padding:.5rem .75rem;text-align:left;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.rank-table td{padding:.55rem .75rem;border-bottom:1px solid var(--border);font-family:var(--mono);vertical-align:middle;}
+.rank-table tbody tr:last-child td{border-bottom:none;}
+.rank-table tbody tr:hover td{background:var(--surface2);}
+.rank-num{color:var(--muted);width:24px;}
+.rank-bar-wrap{background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;}
+.rank-bar-fill{height:100%;border-radius:4px;}
+.fecha-row{display:flex;align-items:center;padding:.55rem .75rem;border-bottom:1px solid var(--border);font-size:12px;}
+.fecha-row:last-child{border-bottom:none;}
+.fecha-row:nth-child(odd){background:var(--surface2);border-radius:6px;}
+.fecha-badge{background:var(--surface2);border-radius:6px;padding:2px 10px;font-family:var(--mono);font-weight:500;color:var(--accent);font-size:13px;margin-left:auto;}
+
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:660px;margin:0 auto;box-shadow:var(--shadow);}
+.form-title{font-size:18px;font-weight:800;margin-bottom:1.5rem;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:520px){.form-grid{grid-template-columns:1fr;}}
+.form-group{display:flex;flex-direction:column;gap:.4rem;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.form-input{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.65rem .9rem;font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #0ea5e924;}
+textarea.form-input{resize:vertical;min-height:72px;}
+
+.alert-cruce{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.25rem;display:none;}
+.alert-cruce.show{display:block;}
+.alert-cruce-title{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#b91c1c;margin-bottom:.6rem;}
+.alert-cruce-row{font-size:12px;font-family:var(--mono);color:#b91c1c;padding:.25rem 0;border-bottom:1px solid #fecaca;}
+.alert-cruce-row:last-child{border-bottom:none;}
+
+.btn{padding:.65rem 1.5rem;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.04em;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#ffffff;box-shadow:0 1px 3px #0ea5e944;}
+.btn-primary:hover{background:#0284c7;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:#0ea5e90d;}
+.btn-danger{background:var(--red);color:#ffffff;border:1px solid #dc2626;}
+.btn-danger:hover{background:#dc2626;}
+.form-actions{display:flex;gap:.75rem;margin-top:1.5rem;flex-wrap:wrap;align-items:center;}
+
+.hist-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;}
+.hist-table{width:100%;border-collapse:collapse;font-size:12px;}
+.hist-table thead tr{background:var(--surface2);}
+.hist-table th{padding:.65rem .9rem;text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap;}
+.hist-table td{padding:.6rem .9rem;border-top:1px solid var(--border);font-family:var(--mono);vertical-align:middle;}
+.hist-table tr:hover td{background:var(--surface2);}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.badge-green{background:#10b98120;color:#047857;}.badge-red{background:#ef444420;color:#b91c1c;}.badge-amber{background:#f59e0b20;color:#b45309;}.badge-blue{background:#0ea5e920;color:#0369a1;}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#ffffff;padding:.75rem 1.75rem;border-radius:8px;font-size:13px;font-weight:700;transition:transform .3s ease;z-index:999;white-space:nowrap;box-shadow:0 4px 14px #10b98155;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.err{background:var(--red);color:#ffffff;box-shadow:0 4px 14px #ef444455;}
+
+/* SPINNER */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid #ffffff60;border-top-color:#ffffff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+/* ACTIVE FILTER CHIPS */
+.chips-bar{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1rem;align-items:center;}
+.chips-bar:empty{display:none;}
+.chip{display:inline-flex;align-items:center;gap:.4rem;background:#0ea5e915;color:#0369a1;border:1px solid #0ea5e955;border-radius:20px;padding:.3rem .75rem;font-size:11px;font-weight:600;letter-spacing:.04em;cursor:default;animation:chip-in .2s ease;}
+.chip button{background:#0ea5e933;color:#0369a1;border:none;border-radius:50%;width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;font-weight:700;line-height:1;padding:0;transition:background .15s;}
+.chip button:hover{background:var(--red);color:#ffffff;}
+.chip-clear{background:transparent;border:none;color:var(--muted);font-size:11px;cursor:pointer;text-decoration:underline;font-family:var(--sans);font-weight:600;}
+.chip-clear:hover{color:var(--red);}
+@keyframes chip-in{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+
+/* DATE RANGE */
+.date-range{display:inline-flex;align-items:center;gap:.4rem;}
+.date-range input{min-width:140px;}
+.date-sep{color:var(--muted);font-size:11px;}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:#00000099;z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:.4rem;}
+.modal-sub{font-size:13px;color:var(--muted2);margin-bottom:1.25rem;}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;flex-wrap:wrap;}
+.pin-input{letter-spacing:.5em;text-align:center;font-size:24px;font-family:var(--mono);max-width:160px;}
+/* ICON BUTTONS (historial) */
+.btn-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;transition:background .15s,color .15s,border-color .15s;padding:0;line-height:1;}
+.btn-icon:hover{background:var(--surface2);color:var(--text);border-color:var(--accent);}
+.btn-icon.del:hover{background:#fef2f2;color:var(--red);border-color:#fecaca;}
+
+/* ===== RESPONSIVE MOBILE ===== */
+@media (max-width: 640px) {
+  /* Navbar compacta */
+  nav { padding: 0 .75rem; }
+  .nav-brand {
+    font-size: 11px;
+    padding: .65rem .65rem .65rem 0;
+    margin-right: .4rem;
+    letter-spacing: .07em;
+  }
+  .nav-tab { padding: .65rem .65rem; font-size: 9.5px; letter-spacing: .04em; }
+
+  /* Sync bar */
+  .sync-bar { padding: .4rem .75rem; font-size: 10px; gap: .4rem; }
+
+  /* Contenido */
+  .view { padding: .875rem .625rem; }
+
+  /* Encabezado dashboard */
+  .dash-header { margin-bottom: .875rem; gap: .5rem; }
+  .dash-title { font-size: 17px; }
+  .dash-sub { font-size: 11px; }
+
+  /* Filter bar apilado en columna */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .55rem;
+    padding: .75rem;
+    border-radius: 10px;
+  }
+  /* Cada grupo label+input ocupa el ancho completo */
+  .filter-group { width: 100%; }
+  .filter-group .filter-input { width: 100% !important; min-width: unset !important; }
+  /* Inputs sueltos en filter-bar (historial) */
+  .filter-bar > .filter-input { width: 100% !important; min-width: unset !important; }
+  /* Date range ocupa todo el ancho */
+  .date-range { width: 100%; display: flex; }
+  .date-range input { flex: 1; min-width: 0 !important; width: auto !important; }
+  /* KPI total se separa del flujo auto */
+  .kpi-total { margin-left: 0; width: 100%; padding: .55rem 1rem; }
+  .kpi-total-val { font-size: 22px; }
+  /* Botón limpiar a ancho completo */
+  .filter-bar > .btn { width: 100%; text-align: center; }
+
+  /* KPIs en 2 columnas */
+  .kpi-strip { grid-template-columns: 1fr 1fr; gap: .5rem; margin-bottom: 1rem; }
+  .kpi-card { padding: .75rem .875rem; }
+  .kpi-val { font-size: 20px; }
+  .kpi-lbl { font-size: 9px; }
+
+  /* Gráficas */
+  .chart-card { padding: .875rem 1rem; }
+  .card-title { font-size: 11px; margin-bottom: .75rem; }
+
+  /* Formulario */
+  .form-card { padding: 1rem .875rem; border-radius: 10px; }
+  .form-title { font-size: 16px; margin-bottom: 1rem; }
+
+  /* Historial header */
+  #view-historial > div:first-child { flex-direction: column; align-items: flex-start; }
+
+  /* Modal */
+  .modal-box { padding: 1.25rem; }
+}
+
+@media (max-width: 400px) {
+  .nav-brand span { display: none; }
+  .kpi-strip { grid-template-columns: 1fr 1fr; }
+  .nav-tab { padding: .6rem .5rem; font-size: 9px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">Novedades <span>/ Muebles</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('dashboard',this)">Dashboard</button>
+    <button class="nav-tab" onclick="showView('form',this)">Registrar</button>
+    <button class="nav-tab" onclick="showView('historial',this)">Historial</button>
+  </div>
+</nav>
+
+<div class="sync-bar">
+  <div class="sync-dot" id="sync-dot"></div>
+  <span id="sync-msg">Conectando con Google Sheets...</span>
+  <span style="margin-left:auto;cursor:pointer;color:var(--accent)" onclick="syncFromSheets()">↻ Sincronizar</span>
+</div>
+
+<!-- DASHBOARD -->
+<div id="view-dashboard" class="view active">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">Panel de control — Novedades Muebles</div>
+      <div class="dash-sub" id="dash-sub">Cargando datos...</div>
+    </div>
+    <button class="btn btn-ghost" style="font-size:11px" onclick="exportCSV()">↓ Exportar CSV</button>
+  </div>
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>PLU</label>
+      <input type="text" class="filter-input" id="fil-plu" placeholder="Introduzca un valor" style="width:140px" oninput="applyFilters()">
+    </div>
+    <div class="filter-group">
+      <label>Fabricante</label>
+      <select class="filter-input" id="fil-fab" onchange="applyFilters()" style="width:170px"><option value="">Todos</option></select>
+    </div>
+    <div class="filter-group">
+      <label>Periodo</label>
+      <select class="filter-input" id="fil-periodo" onchange="applyFilters()" style="width:140px">
+        <option value="">Todos</option>
+        <option value="7">Últimos 7 días</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="2026-04">Abril 2026</option>
+        <option value="2026-05">Mayo 2026</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Rango</label>
+      <div class="date-range">
+        <input type="date" class="filter-input" id="fil-desde" onchange="applyFilters()" title="Desde">
+        <span class="date-sep">—</span>
+        <input type="date" class="filter-input" id="fil-hasta" onchange="applyFilters()" title="Hasta">
+      </div>
+    </div>
+    <button class="btn btn-ghost" style="font-size:10px;padding:.4rem .8rem" onclick="clearAllFilters()">Limpiar</button>
+    <div class="kpi-total">
+      <div class="kpi-total-label">Total novedades</div>
+      <div class="kpi-total-val" id="kpi-total-val">—</div>
+    </div>
+  </div>
+  <div class="chips-bar" id="active-chips"></div>
+  <div class="kpi-strip">
+    <div class="kpi-card blue"><div class="kpi-lbl">PLUs únicos</div><div class="kpi-val blue" id="kpi-plus">—</div></div>
+    <div class="kpi-card amber"><div class="kpi-lbl">Fabricantes</div><div class="kpi-val amber" id="kpi-fabs">—</div></div>
+    <div class="kpi-card green"><div class="kpi-lbl">Solucionados</div><div class="kpi-val green" id="kpi-sol">—</div></div>
+    <div class="kpi-card red"><div class="kpi-lbl">Pendientes</div><div class="kpi-val red" id="kpi-pend">—</div></div>
+    <div class="kpi-card purple"><div class="kpi-lbl">Impacto total</div><div class="kpi-val purple" id="kpi-impacto">—</div></div>
+  </div>
+  <div class="grid-5-3">
+    <div class="chart-card"><div class="card-title">Impacto de novedades por fabricante</div><div class="chart-wrap" style="height:280px"><canvas id="chart-fab"></canvas></div></div>
+    <div class="chart-card"><div class="card-title green">Tasa de resolución</div><div class="chart-wrap" style="height:280px"><canvas id="chart-estado"></canvas></div></div>
+  </div>
+  <div class="grid-4-6">
+    <div class="chart-card"><div class="card-title orange">Participación referencias afectadas</div><div class="chart-wrap" style="height:300px"><canvas id="chart-desc"></canvas></div></div>
+    <div class="chart-card"><div class="card-title red">Evolución diaria de novedades</div><div class="chart-wrap" style="height:300px"><canvas id="chart-linea"></canvas></div></div>
+  </div>
+  <div class="grid-3">
+    <div class="chart-card"><div class="card-title amber">Registro por fecha</div><div id="tabla-fechas"></div></div>
+    <div class="chart-card"><div class="card-title purple">Top referencias críticas</div>
+      <table class="rank-table"><thead><tr><th></th><th>Descripción</th><th>Uds absolutas</th></tr></thead><tbody id="tbody-top-ref"></tbody></table>
+    </div>
+    <div class="chart-card"><div class="card-title orange">Focos de error por ubicación</div>
+      <table class="rank-table"><thead><tr><th></th><th>Zona</th><th>Casos</th><th>Uds</th></tr></thead><tbody id="tbody-zonas"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- FORM -->
+<div id="view-form" class="view">
+  <div class="form-card">
+    <div class="form-title">Registrar novedad — Muebles</div>
+    <div class="alert-cruce" id="alert-cruce">
+      <div class="alert-cruce-title">⚠ Novedad cruzada detectada</div>
+      <div id="alert-cruce-rows"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">PLU *</label><input type="number" class="form-input" id="f-plu" placeholder="Ej: 27871" oninput="checkCruce()"></div>
+      <div class="form-group"><label class="form-label">Posición *</label><input type="text" class="form-input" id="f-posicion" placeholder="Ej: 05-A-12-04-01" oninput="checkCruce()"></div>
+      <div class="form-group full"><label class="form-label">Descripción</label><input type="text" class="form-input" id="f-descripcion" placeholder="Se autocompleta con el PLU"></div>
+      <div class="form-group"><label class="form-label">Unidades *</label><input type="number" class="form-input" id="f-unidades" placeholder="Ej: -2 o 3"></div>
+      <div class="form-group"><label class="form-label">Costo unitario ($)</label><input type="number" class="form-input" id="f-costo" placeholder="Ej: 3999000"></div>
+      <div class="form-group"><label class="form-label">Fabricante</label>
+        <select class="form-input" id="f-fabricante"><option value="">Seleccionar...</option>
+          <option>MUEBLES CFTLND</option><option>MUEBLES EXT MGC</option><option>MUEBLES HOME LIVING</option>
+          <option>MUEBLES MAY</option><option>MUEBLES PK</option><option>MUEBLES U2</option>
+          <option>MUEBLES UNIQ</option><option>MUEBLES URBAN CHIC</option><option>MUEBLES VK</option>
+          <option>MUEBLES YN FURNITURE</option><option>MUEBLESFKI</option><option>POLTRONAS EHL</option>
+          <option>SILLAS JULI</option><option>SILLAS XIN</option><option>SILLAS ZL</option>
+          <option>TAPETES RUG</option><option>OTRO</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Estado</label>
+        <select class="form-input" id="f-estado">
+          <option value="PENDIENTE">PENDIENTE</option>
+          <option value="EN PROCESO">EN PROCESO</option>
+          <option value="SOLUCIONADO">SOLUCIONADO</option>
+        </select>
+      </div>
+      <div class="form-group full"><label class="form-label">Observación</label><textarea class="form-input" id="f-obs" placeholder="Detalles adicionales..."></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-guardar" onclick="guardar()">Guardar novedad</button>
+      <button class="btn btn-ghost" onclick="limpiarForm()">Limpiar</button>
+      <span id="save-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORIAL -->
+<div id="view-historial" class="view">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem">
+    <div style="font-size:20px;font-weight:800">Historial de novedades</div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" style="font-size:11px" onclick="syncFromSheets()">↻ Sincronizar</button>
+      <button class="btn btn-ghost" style="font-size:11px" onclick="exportCSV()">↓ Exportar CSV</button>
+    </div>
+  </div>
+  <div class="filter-bar" style="margin-bottom:1rem">
+    <input type="text" class="filter-input" id="hfil-plu" placeholder="PLU" style="width:90px" oninput="renderHistorial()">
+    <input type="text" class="filter-input" id="hfil-pos" placeholder="Posición" style="width:140px" oninput="renderHistorial()">
+    <select class="filter-input" id="hfil-est" onchange="renderHistorial()" style="width:150px">
+      <option value="">Todos los estados</option><option>PENDIENTE</option><option>EN PROCESO</option><option>SOLUCIONADO</option>
+    </select>
+    <select class="filter-input" id="hfil-fab" onchange="renderHistorial()" style="width:180px">
+      <option value="">Todos los fabricantes</option>
+      <option>MUEBLES CFTLND</option><option>MUEBLES EXT MGC</option><option>MUEBLES HOME LIVING</option>
+      <option>MUEBLES MAY</option><option>MUEBLES PK</option><option>MUEBLES U2</option>
+      <option>MUEBLES UNIQ</option><option>MUEBLES URBAN CHIC</option><option>MUEBLES VK</option>
+      <option>MUEBLES YN FURNITURE</option><option>MUEBLESFKI</option><option>POLTRONAS EHL</option>
+      <option>SILLAS JULI</option><option>SILLAS XIN</option><option>SILLAS ZL</option><option>TAPETES RUG</option>
+    </select>
+    <button class="btn btn-ghost" style="font-size:11px;padding:.4rem .9rem" onclick="clearHFilters()">Limpiar</button>
+  </div>
+  <div class="hist-wrap">
+    <table class="hist-table">
+      <thead><tr><th>PLU</th><th>Descripción</th><th>Posición</th><th>Uds</th><th>Fabricante</th><th>Estado</th><th>Fecha</th><th>Costo incid.</th><th>Origen</th><th></th></tr></thead>
+      <tbody id="tbody-hist"></tbody>
+    </table>
+  </div>
+  <div id="hist-count" style="font-size:11px;color:var(--muted);margin-top:.75rem"></div>
+</div>
+
+<!-- MODAL ELIMINAR -->
+<div id="modal-delete" class="modal-overlay" style="display:none" onclick="if(event.target===this)cancelDelete()">
+  <div class="modal-box">
+    <div class="modal-title">Eliminar novedad</div>
+    <div class="modal-sub">Ingresa el código de seguridad de 4 dígitos para confirmar la eliminación. Esta acción no se puede deshacer.</div>
+    <input type="password" id="modal-pin" class="form-input pin-input" maxlength="4" inputmode="numeric" placeholder="····"
+      oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+      onkeydown="if(event.key==='Enter')confirmDelete()">
+    <div id="modal-pin-err" style="color:var(--red);font-size:12px;margin-top:.5rem;display:none">Código incorrecto. Intenta de nuevo.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+      <button class="btn btn-ghost" onclick="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div id="modal-edit" class="modal-overlay" style="display:none" onclick="if(event.target===this)cancelEdit()">
+  <div class="modal-box">
+    <div class="modal-title">Editar novedad</div>
+    <div class="form-grid">
+      <div class="form-group full"><label class="form-label">Descripción</label><input type="text" class="form-input" id="me-desc"></div>
+      <div class="form-group"><label class="form-label">Posición</label><input type="text" class="form-input" id="me-pos"></div>
+      <div class="form-group"><label class="form-label">Unidades</label><input type="number" class="form-input" id="me-uds"></div>
+      <div class="form-group"><label class="form-label">Costo unitario ($)</label><input type="number" class="form-input" id="me-costo"></div>
+      <div class="form-group"><label class="form-label">Fabricante</label>
+        <select class="form-input" id="me-fab">
+          <option value="">Seleccionar...</option>
+          <option>MUEBLES CFTLND</option><option>MUEBLES EXT MGC</option><option>MUEBLES HOME LIVING</option>
+          <option>MUEBLES MAY</option><option>MUEBLES PK</option><option>MUEBLES U2</option>
+          <option>MUEBLES UNIQ</option><option>MUEBLES URBAN CHIC</option><option>MUEBLES VK</option>
+          <option>MUEBLES YN FURNITURE</option><option>MUEBLESFKI</option><option>POLTRONAS EHL</option>
+          <option>SILLAS JULI</option><option>SILLAS XIN</option><option>SILLAS ZL</option>
+          <option>TAPETES RUG</option><option>OTRO</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Estado</label>
+        <select class="form-input" id="me-estado">
+          <option value="PENDIENTE">PENDIENTE</option>
+          <option value="EN PROCESO">EN PROCESO</option>
+          <option value="SOLUCIONADO">SOLUCIONADO</option>
+        </select>
+      </div>
+      <div class="form-group full"><label class="form-label">Observación</label><textarea class="form-input" id="me-obs" rows="3"></textarea></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEditModal()">Guardar cambios</button>
+      <button class="btn btn-ghost" onclick="cancelEdit()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== CONFIG ========== */
+const SHEET_ID = '1v2rr7C237xMVqkq3N8FUHxxK4u-BGuUhjDeaoi5ehcs';
+const API_KEY  = 'AIzaSyCSPAj6qAhFXhYzJq5XRx_wI8fEVVvy19Y';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxb4ZhO9SBscuyuQTvzBgVnjANvEC0fpK60bAxpHlbIISibuzX1AxQSiYYLGgWJz4sWnA/exec';
+const MAESTRO_URL = SCRIPT_URL + '?action=maestro';
+const SHEET_NAME = 'MUEBLES';
+const READ_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
+const DELETE_PIN = '0000'; // ← Cambia este valor a tu PIN secreto de 4 dígitos
+
+/* ========== SEED (histórico base) ========== */
+const SEED = [{"plu":26403,"descripcion":"SOFA PLAYA EXTERIOR 58X220X86","posicion":"02-I-03-04-01","unidades":1,"fabricante":"MUEBLES EXT MGC","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":5680000,"costoIncidencia":5680000},{"plu":27871,"descripcion":"SOFA 3 PUESTOS JAIPUR ARENA","posicion":"02-J-03-05-01","unidades":-1,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":3999000,"costoIncidencia":-3999000},{"plu":26403,"descripcion":"SOFA PLAYA EXTERIOR 58X220X86","posicion":"05-A-12-04-01","unidades":-1,"fabricante":"MUEBLES EXT MGC","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":5680000,"costoIncidencia":-5680000},{"plu":28356,"descripcion":"SILLON SERMON NEGRO","posicion":"05-D-23-06-01","unidades":1,"fabricante":"SILLAS JULI","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":2999000,"costoIncidencia":2999000},{"plu":26158,"descripcion":"SOFA 3 PUESTOS RECLINABLE LEO BEIGE","posicion":"05-E-12-01-01","unidades":-1,"fabricante":"MUEBLES URBAN CHIC","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":15980000,"costoIncidencia":-15980000},{"plu":28508,"descripcion":"SOFA 2 PUESTOS RECLINABLE LEO CUERO MIEL","posicion":"05-E-13-02-02","unidades":-1,"fabricante":"MUEBLES URBAN CHIC","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":14480000,"costoIncidencia":-14480000},{"plu":27871,"descripcion":"SOFA 3 PUESTOS JAIPUR ARENA","posicion":"05-H-05-01-01","unidades":-1,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-04-15","costoUnitario":3999000,"costoIncidencia":-3999000},{"plu":27527,"descripcion":"CONSOLA SAFARI 79X160X41","posicion":"05-B-09-04-01","unidades":1,"fabricante":"MUEBLES MAY","estado":"SOLUCIONADO","fecha":"2026-04-16","costoUnitario":3499000,"costoIncidencia":3499000},{"plu":27527,"descripcion":"CONSOLA SAFARI 79X160X41","posicion":"05-D-09-01-01","unidades":-1,"fabricante":"MUEBLES MAY","estado":"SOLUCIONADO","fecha":"2026-04-16","costoUnitario":3499000,"costoIncidencia":-3499000},{"plu":24001,"descripcion":"MECEDORA BAVARO AMARILLA","posicion":"05-H-08-03-01","unidades":-2,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":449900,"costoIncidencia":-899800},{"plu":24001,"descripcion":"MECEDORA BAVARO AMARILLA","posicion":"05-G-18-03-01","unidades":-4,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":449900,"costoIncidencia":-1799600},{"plu":24001,"descripcion":"MECEDORA BAVARO AMARILLA","posicion":"05-G-01-05-02","unidades":1,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":449900,"costoIncidencia":449900},{"plu":24001,"descripcion":"MECEDORA BAVARO AMARILLA","posicion":"05-E-12-04-01","unidades":3,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":449900,"costoIncidencia":1349700},{"plu":24001,"descripcion":"MECEDORA BAVARO AMARILLA","posicion":"04-I-15-05-01","unidades":2,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":449900,"costoIncidencia":899800},{"plu":10072,"descripcion":"SECCIONAL BRUME BEIGE 80X286X240 CM","posicion":"02-H-02-06-01","unidades":-1,"fabricante":"MUEBLESFKI","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":14999000,"costoIncidencia":-14999000},{"plu":10072,"descripcion":"SECCIONAL BRUME BEIGE 80X286X240 CM","posicion":"02-H-05-06-01","unidades":1,"fabricante":"MUEBLESFKI","estado":"SOLUCIONADO","fecha":"2026-04-17","costoUnitario":14999000,"costoIncidencia":14999000},{"plu":23413,"descripcion":"MODULAR MELBOURNE MEDIO","posicion":"04-A-04-02-02","unidades":-1,"fabricante":"MUEBLES PK","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":3499000,"costoIncidencia":-3499000},{"plu":29442,"descripcion":"SOFA EN L VIVALDI DERECHO 70X286X176CM","posicion":"05-A-06-04-01","unidades":-1,"fabricante":"MUEBLES VK","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":9680000,"costoIncidencia":-9680000},{"plu":29442,"descripcion":"SOFA EN L VIVALDI DERECHO 70X286X176CM","posicion":"05-A-06-05-01","unidades":1,"fabricante":"MUEBLES VK","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":9680000,"costoIncidencia":9680000},{"plu":28063,"descripcion":"RECLINABLE 3 PUESTOS COVY HUMO","posicion":"05-A-11-06-01","unidades":1,"fabricante":"MUEBLES U2","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":4299000,"costoIncidencia":4299000},{"plu":24296,"descripcion":"SOFA 3 PTOS ELIA CAFE","posicion":"05-A-20-03-01","unidades":-1,"fabricante":"MUEBLES CFTLND","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":3699000,"costoIncidencia":-3699000},{"plu":28164,"descripcion":"SOFA 2 PUESTOS ELIA CAFE","posicion":"01-A-01-03-01","unidades":-2,"fabricante":"MUEBLES CFTLND","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":2899000,"costoIncidencia":-5798000},{"plu":28164,"descripcion":"SOFA 2 PUESTOS ELIA CAFE","posicion":"05-A-01-03-01","unidades":2,"fabricante":"MUEBLES CFTLND","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":2899000,"costoIncidencia":5798000},{"plu":24296,"descripcion":"SOFA 3 PTOS ELIA CAFE","posicion":"05-A-24-02-01","unidades":1,"fabricante":"MUEBLES CFTLND","estado":"SOLUCIONADO","fecha":"2026-04-21","costoUnitario":3699000,"costoIncidencia":3699000},{"plu":26406,"descripcion":"SOFA COSTA EXTERIOR 71X162X78","posicion":"01-B-02-05-01","unidades":3,"fabricante":"MUEBLES EXT MGC","estado":"SOLUCIONADO","fecha":"2026-04-22","costoUnitario":4480000,"costoIncidencia":13440000},{"plu":26406,"descripcion":"SOFA COSTA EXTERIOR 71X162X78","posicion":"02-J-02-05-02","unidades":-3,"fabricante":"MUEBLES EXT MGC","estado":"SOLUCIONADO","fecha":"2026-04-22","costoUnitario":4480000,"costoIncidencia":-13440000},{"plu":27871,"descripcion":"SOFA 3 PUESTOS JAIPUR ARENA","posicion":"01-C-03-05-01","unidades":1,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-04-22","costoUnitario":3999000,"costoIncidencia":3999000},{"plu":24002,"descripcion":"MECEDORA BAVARO BLANCA","posicion":"FERBIENES","unidades":4,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-23","costoUnitario":449900,"costoIncidencia":1799600},{"plu":24002,"descripcion":"MECEDORA BAVARO BLANCA","posicion":"05-H-19-03-01","unidades":-4,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-23","costoUnitario":449900,"costoIncidencia":-1799600},{"plu":22024,"descripcion":"SILLA COMEDOR LODI NEGRA","posicion":"04-I-14-03-01","unidades":-4,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-24","costoUnitario":369900,"costoIncidencia":-1479600},{"plu":22024,"descripcion":"SILLA COMEDOR LODI NEGRA","posicion":"04-I-14-03-02","unidades":4,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-04-24","costoUnitario":369900,"costoIncidencia":1479600},{"plu":25877,"descripcion":"BANCA TEJIDO TIPO V NEGRA 46X122X43","posicion":"04-I-15-06-02","unidades":1,"fabricante":"SILLAS XIN","estado":"SOLUCIONADO","fecha":"2026-05-05","costoUnitario":1289000,"costoIncidencia":1289000},{"plu":25877,"descripcion":"BANCA TEJIDO TIPO V NEGRA 46X122X43","posicion":"05-03-02-02","unidades":-1,"fabricante":"SILLAS XIN","estado":"SOLUCIONADO","fecha":"2026-05-05","costoUnitario":1289000,"costoIncidencia":-1289000},{"plu":27550,"descripcion":"POLTRONA PAVIA MARFIL 73X78X78","posicion":"04-A-10-07-01","unidades":-1,"fabricante":"MUEBLES HOME LIVING","estado":"SOLUCIONADO","fecha":"2026-05-07","costoUnitario":2999000,"costoIncidencia":-2999000},{"plu":27550,"descripcion":"POLTRONA PAVIA MARFIL 73X78X78","posicion":"04-A-17-05-02","unidades":1,"fabricante":"MUEBLES HOME LIVING","estado":"SOLUCIONADO","fecha":"2026-05-07","costoUnitario":2999000,"costoIncidencia":2999000},{"plu":24882,"descripcion":"SILLA BAR ESPALDAR BAJO CAFE PATA NEGRA","posicion":"04-I-18-04-02","unidades":-4,"fabricante":"MUEBLES YN FURNITURE","estado":"SOLUCIONADO","fecha":"2026-05-08","costoUnitario":599000,"costoIncidencia":-2396000},{"plu":24882,"descripcion":"SILLA BAR ESPALDAR BAJO CAFE PATA NEGRA","posicion":"04-I-18-05-02","unidades":4,"fabricante":"MUEBLES YN FURNITURE","estado":"SOLUCIONADO","fecha":"2026-05-08","costoUnitario":599000,"costoIncidencia":2396000},{"plu":13563,"descripcion":"SILLA BAR YORK GRIS","posicion":"05-C-07-06-02","unidades":-2,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-08","costoUnitario":349900,"costoIncidencia":-699800},{"plu":13563,"descripcion":"SILLA BAR YORK GRIS","posicion":"05-H-19-02-01","unidades":2,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-08","costoUnitario":349900,"costoIncidencia":699800},{"plu":27808,"descripcion":"SILLA COMEDOR EVI CHOCOLATE OSCURO 76X56X54","posicion":"04-B-02-06-02","unidades":1,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":999000},{"plu":27808,"descripcion":"SILLA COMEDOR EVI CHOCOLATE OSCURO 76X56X54","posicion":"04-B-19-06-02","unidades":-1,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":-999000},{"plu":27933,"descripcion":"SILLA MECEDORA LALI GRIS","posicion":"04-I-07-06-01","unidades":-1,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":499900,"costoIncidencia":-499900},{"plu":27933,"descripcion":"SILLA MECEDORA LALI GRIS","posicion":"04-I-13-06-01","unidades":1,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":499900,"costoIncidencia":499900},{"plu":25034,"descripcion":"SILLA DE COMEDOR JENNA GRIS OSCURO 84X58X59","posicion":"04-I-14-06-01","unidades":4,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":489000,"costoIncidencia":1956000},{"plu":25034,"descripcion":"SILLA DE COMEDOR JENNA GRIS OSCURO 84X58X59","posicion":"05-C-04-02-02","unidades":-4,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":489000,"costoIncidencia":-1956000},{"plu":26035,"descripcion":"SILLA COMEDOR VERMONT 78X52X55 SLATE","posicion":"05-D-09-05-01","unidades":-6,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":-5994000},{"plu":26035,"descripcion":"SILLA COMEDOR VERMONT 78X52X55 SLATE","posicion":"05-D-09-05-02","unidades":6,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":5994000},{"plu":4937,"descripcion":"SILLA YORK BLANCA","posicion":"05-E-20-04-02","unidades":-3,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":249900,"costoIncidencia":-749700},{"plu":4937,"descripcion":"SILLA YORK BLANCA","posicion":"05-G-05-02-01","unidades":3,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":249900,"costoIncidencia":749700},{"plu":25131,"descripcion":"SILLA COMEDOR EVI BEIGE 76X56X54","posicion":"05-G-13-04-02","unidades":2,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":1998000},{"plu":25131,"descripcion":"SILLA COMEDOR EVI BEIGE 76X56X54","posicion":"05-G-20-04-02","unidades":-2,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":-1998000},{"plu":25034,"descripcion":"SILLA DE COMEDOR JENNA GRIS OSCURO 84X58X59","posicion":"05-G-15-05-01","unidades":-3,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":489000,"costoIncidencia":-1467000},{"plu":25034,"descripcion":"SILLA DE COMEDOR JENNA GRIS OSCURO 84X58X59","posicion":"05-H-08-05-02","unidades":3,"fabricante":"MUEBLES UNIQ","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":489000,"costoIncidencia":1467000},{"plu":28343,"descripcion":"SILLA ESCRITORIO WALI MIEL","posicion":"05-E-10-04-01","unidades":-1,"fabricante":"SILLAS JULI","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":-999000},{"plu":28345,"descripcion":"SILLA ESCRITORIO PAVI MARFIL","posicion":"05-D-02-04-01","unidades":1,"fabricante":"SILLAS JULI","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":599000,"costoIncidencia":599000},{"plu":25131,"descripcion":"SILLA COMEDOR EVI BEIGE 76X56X54","posicion":"05-G-06-05-02","unidades":-2,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-11","costoUnitario":999000,"costoIncidencia":-1998000},{"plu":25131,"descripcion":"SILLA COMEDOR EVI BEIGE 76X56X54","posicion":"05-D-07-03-01","unidades":2,"fabricante":"POLTRONAS EHL","estado":"SOLUCIONADO","fecha":"2026-05-12","costoUnitario":999000,"costoIncidencia":1998000},{"plu":24002,"descripcion":"MECEDORA BAVARO BLANCA","posicion":"05-D-05-02-02","unidades":1,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-22","costoUnitario":449900,"costoIncidencia":449900},{"plu":24002,"descripcion":"MECEDORA BAVARO BLANCA","posicion":"05-G-15-02-02","unidades":-1,"fabricante":"SILLAS ZL","estado":"SOLUCIONADO","fecha":"2026-05-22","costoUnitario":449900,"costoIncidencia":-449900},{"plu":25082,"descripcion":"TAPETE HOUSTAN 200 X 300CM","posicion":"05-J-14-02-01","unidades":-1,"fabricante":"TAPETES RUG","estado":"SOLUCIONADO","fecha":"2026-05-22","costoUnitario":1499900,"costoIncidencia":-1499900},{"plu":25082,"descripcion":"TAPETE HOUSTAN 200 X 300CM","posicion":"05-J-15-01-01","unidades":1,"fabricante":"TAPETES RUG","estado":"SOLUCIONADO","fecha":"2026-05-22","costoUnitario":1499900,"costoIncidencia":1499900}];
+
+/* ========== STATE ========== */
+let records = [], charts = {}, maestroMap = {}, lastAutoFilledPLU = null;
+let deletedSet = new Set(JSON.parse(localStorage.getItem('nov-deleted')||'[]'));
+let localEdits = JSON.parse(localStorage.getItem('nov-edits')||'{}');
+let chartFilters = { fabricante: null, estado: null, descripcion: null, fecha: null };
+const fp = r => `${r.plu}||${r.posicion}||${r.fecha}`;
+function persistDeleted() { localStorage.setItem('nov-deleted', JSON.stringify([...deletedSet])); }
+function persistEdits() { localStorage.setItem('nov-edits', JSON.stringify(localEdits)); }
+const FABS = ['MUEBLES CFTLND','MUEBLES EXT MGC','MUEBLES HOME LIVING','MUEBLES MAY','MUEBLES PK','MUEBLES U2','MUEBLES UNIQ','MUEBLES URBAN CHIC','MUEBLES VK','MUEBLES YN FURNITURE','MUEBLESFKI','POLTRONAS EHL','SILLAS JULI','SILLAS XIN','SILLAS ZL','TAPETES RUG'];
+
+/* ========== MAESTRO ========== */
+async function loadMaestro() {
+  try {
+    const res = await fetch(MAESTRO_URL);
+    const json = await res.json();
+    const rows = json.data || [];
+    if (rows.length < 2) return;
+    rows.slice(1).forEach(r => {
+      const plu = String(r[0]).trim();
+      if (plu) maestroMap[plu] = { descripcion: String(r[1]||'').trim(), fabricante: String(r[2]||'').trim(), precio: parsePrecio(r[3]) };
+    });
+    localStorage.setItem('maestro-cache', JSON.stringify(maestroMap));
+    const pluEl = document.getElementById('f-plu');
+    if (pluEl && pluEl.value) { lastAutoFilledPLU = null; checkCruce(); }
+  } catch(e) {
+    const c = localStorage.getItem('maestro-cache');
+    if (c) maestroMap = JSON.parse(c);
+  }
+}
+function lookupMaestro(plu) { return maestroMap[String(plu)] || null; }
+
+/* ========== SYNC STATUS ========== */
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  dot.className = 'sync-dot ' + state;
+  document.getElementById('sync-msg').textContent = msg;
+}
+
+/* ========== LOAD FROM SHEETS ========== */
+async function syncFromSheets() {
+  setSyncStatus('syncing', 'Sincronizando con Google Sheets...');
+  try {
+    const res = await fetch(READ_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    const rows = json.values || [];
+    if (rows.length < 2) {
+      records = SEED.map((s,i) => ({...s, _id:'seed-'+i, _seed:true, _obs:'', _origen:'Histórico'}));
+      saveLocal();
+      setSyncStatus('online', 'Sheet vacío — mostrando datos históricos · ' + new Date().toLocaleTimeString('es-CO'));
+      applyFilters(); return;
+    }
+    const headers = rows[0].map(h => h.toString().trim().toUpperCase());
+    const idx = h => headers.indexOf(h);
+    const sheetRecords = rows.slice(1).map((r, i) => ({
+      _id: 'sheets-' + i,
+      _seed: false,
+      _origen: r[idx('ORIGEN')] || 'App',
+      plu: parseInt(r[idx('PLU')]) || 0,
+      descripcion: r[idx('DESCRIPCION')] || '',
+      posicion: r[idx('POSICION')] || '',
+      unidades: parseInt(r[idx('UNIDADES')]) || 0,
+      fabricante: r[idx('FABRICANTE')] || '',
+      estado: r[idx('ESTADO')] || 'PENDIENTE',
+      fecha: r[idx('FECHA')] || '',
+      costoUnitario: parseInt(r[idx('COSTO_UNITARIO')]) || 0,
+      costoIncidencia: parseInt(r[idx('COSTO_INCIDENCIA')]) || 0,
+      _obs: r[idx('OBSERVACION')] || ''
+    })).filter(r => r.plu > 0);
+
+    const seedRecords = SEED.map((s,i) => ({...s, _id:'seed-'+i, _seed:true, _obs:'', _origen:'Histórico'}));
+    records = sheetRecords.length > 0
+      ? [...seedRecords, ...sheetRecords]
+      : seedRecords;
+    records = records.filter(r => !deletedSet.has(fp(r)));
+    // Aplicar ediciones locales sobre los datos de Sheets (evita que el sync pise cambios)
+    records = records.map(r => { const e = localEdits[fp(r)]; return e ? {...r, ...e} : r; });
+
+    saveLocal();
+    setSyncStatus('online', `Sincronizado · ${records.length} novedades · ${new Date().toLocaleTimeString('es-CO')}`);
+    applyFilters();
+    if (document.getElementById('view-historial').classList.contains('active')) renderHistorial();
+  } catch(e) {
+    setSyncStatus('error', 'Sin conexión — usando datos locales (' + e.message + ')');
+    loadLocal();
+    applyFilters();
+  }
+}
+
+/* ========== WRITE TO SHEETS ========== */
+async function writeToSheets(record) {
+  const payload = {
+    plu: record.plu,
+    descripcion: record.descripcion,
+    posicion: record.posicion,
+    unidades: record.unidades,
+    fabricante: record.fabricante,
+    estado: record.estado,
+    fecha: record.fecha,
+    costoUnitario: record.costoUnitario,
+    costoIncidencia: record.costoIncidencia,
+    obs: record._obs || ''
+  };
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return true;
+}
+
+/* ========== LOCAL STORAGE ========== */
+function saveLocal() { localStorage.setItem('nov-muebles-v3', JSON.stringify(records)); }
+function loadLocal() {
+  const saved = localStorage.getItem('nov-muebles-v3');
+  if (saved) { records = JSON.parse(saved); } else {
+    records = SEED.map((s,i) => ({...s, _id:'seed-'+i, _seed:true, _obs:'', _origen:'Histórico'}));
+    saveLocal();
+  }
+  records = records.filter(r => !deletedSet.has(fp(r)));
+}
+
+/* ========== UTILS ========== */
+const parsePrecio = v => parseInt(String(v||'').replace(/[^0-9]/g,'')) || 0;
+const COP = v => '$' + Math.abs(Math.round(v)).toLocaleString('es-CO');
+const fmtCOP = v => (v<0?'-':'')+COP(v);
+const trunc = (s,n) => s && s.length>n ? s.slice(0,n)+'...' : (s||'');
+function estadoBadge(e) {
+  if(e==='SOLUCIONADO') return `<span class="badge badge-green">${e}</span>`;
+  if(e==='PENDIENTE') return `<span class="badge badge-red">${e}</span>`;
+  return `<span class="badge badge-amber">${e}</span>`;
+}
+function fmtFecha(f) {
+  const d = new Date(f+'T12:00:00');
+  const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return d.getDate()+' '+m[d.getMonth()]+' '+d.getFullYear();
+}
+const PAL_ORANGE=['#fb923c','#f97316','#ea580c','#c2410c','#9a3412','#fbbf24','#f59e0b','#d97706','#b45309','#fde68a','#fcd34d','#fca5a5','#f87171'];
+
+/* ========== NAVIGATION ========== */
+function showView(id, btn) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('view-'+id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id==='dashboard') applyFilters();
+  if(id==='historial') renderHistorial();
+}
+
+/* ========== FILTERS ========== */
+function applyFilters() {
+  const plu = document.getElementById('fil-plu').value.trim();
+  const fab = document.getElementById('fil-fab').value;
+  const per = document.getElementById('fil-periodo').value;
+  const desde = document.getElementById('fil-desde').value;
+  const hasta = document.getElementById('fil-hasta').value;
+
+  let perStart = null;
+  if (per === '7' || per === '30') {
+    const d = new Date(); d.setDate(d.getDate() - parseInt(per));
+    perStart = d.toISOString().slice(0,10);
+  }
+
+  const data = records.filter(r => {
+    if (plu && !String(r.plu).includes(plu)) return false;
+    if (fab && r.fabricante !== fab) return false;
+    if (desde || hasta) {
+      if (desde && r.fecha < desde) return false;
+      if (hasta && r.fecha > hasta) return false;
+    } else if (perStart) {
+      if (r.fecha < perStart) return false;
+    } else if (per) {
+      if (!r.fecha.startsWith(per)) return false;
+    }
+    if (chartFilters.fabricante && r.fabricante !== chartFilters.fabricante) return false;
+    if (chartFilters.estado && r.estado !== chartFilters.estado) return false;
+    if (chartFilters.descripcion && r.descripcion !== chartFilters.descripcion) return false;
+    if (chartFilters.fecha && r.fecha !== chartFilters.fecha) return false;
+    return true;
+  });
+  renderDashboard(data);
+  renderActiveChips();
+}
+
+function toggleChartFilter(key, value) {
+  if (!value || value === '__OTROS__') return;
+  chartFilters[key] = chartFilters[key] === value ? null : value;
+  applyFilters();
+}
+function removeChartFilter(key) { chartFilters[key] = null; applyFilters(); }
+function clearAllFilters() {
+  chartFilters = { fabricante: null, estado: null, descripcion: null, fecha: null };
+  document.getElementById('fil-plu').value = '';
+  document.getElementById('fil-fab').value = '';
+  document.getElementById('fil-periodo').value = '';
+  document.getElementById('fil-desde').value = '';
+  document.getElementById('fil-hasta').value = '';
+  applyFilters();
+}
+function renderActiveChips() {
+  const chips = [];
+  if (chartFilters.fabricante) chips.push({k:'fabricante', l:'Fabricante: '+chartFilters.fabricante});
+  if (chartFilters.estado) chips.push({k:'estado', l:'Estado: '+chartFilters.estado});
+  if (chartFilters.descripcion) chips.push({k:'descripcion', l:'Ref: '+trunc(chartFilters.descripcion,28)});
+  if (chartFilters.fecha) chips.push({k:'fecha', l:'Fecha: '+fmtFecha(chartFilters.fecha)});
+  const wrap = document.getElementById('active-chips');
+  if (!chips.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = chips.map(c =>
+    `<span class="chip">${c.l}<button onclick="removeChartFilter('${c.k}')" title="Quitar filtro">×</button></span>`
+  ).join('') + `<button class="chip-clear" onclick="clearAllFilters()">Limpiar todo</button>`;
+}
+
+/* ========== DASHBOARD ========== */
+function renderDashboard(data) {
+  document.getElementById('kpi-total-val').textContent = data.length;
+  document.getElementById('kpi-plus').textContent = new Set(data.map(r=>r.plu)).size;
+  document.getElementById('kpi-fabs').textContent = new Set(data.map(r=>r.fabricante)).size;
+  document.getElementById('kpi-sol').textContent = data.filter(r=>r.estado==='SOLUCIONADO').length;
+  document.getElementById('kpi-pend').textContent = data.filter(r=>r.estado==='PENDIENTE').length;
+  document.getElementById('kpi-impacto').textContent = COP(data.reduce((s,r)=>s+Math.abs(r.costoIncidencia||0),0));
+  const fechaMax = data.reduce((a,b)=>a.fecha>b.fecha?a:b, data[0]||{fecha:''}).fecha;
+  document.getElementById('dash-sub').textContent = `Última novedad: ${fechaMax?fmtFecha(fechaMax):'—'} · ${data.length} registros`;
+  renderChartFab(data); renderChartEstado(data);
+  renderChartDesc(data); renderChartLinea(data);
+  renderTablaFechas(data); renderTopRef(data); renderZonas(data);
+}
+
+function destroyChart(id) { if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+
+const chartDefaults = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{ tooltip:{ backgroundColor:'#0f172a',borderColor:'#334155',borderWidth:1,titleColor:'#ffffff',bodyColor:'#cbd5e1',padding:10,cornerRadius:8 } },
+  onHover: (e, els) => { if (e.native) e.native.target.style.cursor = els.length ? 'pointer' : 'default'; }
+};
+
+function renderChartFab(data) {
+  const cnt={};
+  data.forEach(r=>{ cnt[r.fabricante]=(cnt[r.fabricante]||0)+1; });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  destroyChart('fab');
+  charts.fab = new Chart(document.getElementById('chart-fab'),{
+    type:'bar',
+    data:{ labels:sorted.map(x=>x[0]), datasets:[{ label:'Total', data:sorted.map(x=>x[1]), backgroundColor:'#0ea5e9cc', hoverBackgroundColor:'#0284c7', borderColor:'#0ea5e9', borderWidth:1, borderRadius:5, borderSkipped:false }] },
+    options:{ ...chartDefaults,
+      onClick:(e,els)=>{ if(!els.length) return; toggleChartFilter('fabricante', charts.fab.data.labels[els[0].index]); },
+      plugins:{...chartDefaults.plugins, legend:{display:true,labels:{color:'#475569',font:{family:'Syne',size:11},boxWidth:12}}},
+      scales:{ x:{ticks:{color:'#475569',font:{family:'DM Mono',size:10},maxRotation:35},grid:{color:'#e2e8f080'},border:{color:'#cbd5e1'}}, y:{ticks:{color:'#475569',font:{family:'DM Mono',size:11},stepSize:2},grid:{color:'#e2e8f0'},border:{color:'#cbd5e1'}} }
+    }
+  });
+}
+
+function renderChartEstado(data) {
+  const cnt={}; data.forEach(r=>{ cnt[r.estado]=(cnt[r.estado]||0)+1; });
+  const labels=Object.keys(cnt), values=Object.values(cnt);
+  const colors={'SOLUCIONADO':'#10b981','PENDIENTE':'#ef4444','EN PROCESO':'#f59e0b'};
+  destroyChart('estado');
+  charts.estado = new Chart(document.getElementById('chart-estado'),{
+    type:'doughnut',
+    data:{ labels, datasets:[{ data:values, backgroundColor:labels.map(l=>colors[l]||'#6366f1'), borderWidth:2, borderColor:'#ffffff', hoverOffset:8 }] },
+    options:{ ...chartDefaults, cutout:'68%',
+      onClick:(e,els)=>{ if(!els.length) return; toggleChartFilter('estado', charts.estado.data.labels[els[0].index]); },
+      plugins:{...chartDefaults.plugins,
+      legend:{position:'right',labels:{color:'#475569',font:{family:'Syne',size:11},padding:16,boxWidth:10,usePointStyle:true,pointStyleWidth:8}}
+    }},
+    plugins:[{ id:'ct', afterDraw(c){ const {ctx,chartArea:{left,top,right,bottom}}=c; const cx=(left+right)/2,cy=(top+bottom)/2; const tot=values.reduce((a,b)=>a+b,0); ctx.save(); ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#0f172a'; ctx.font='bold 22px DM Mono'; ctx.fillText(tot,cx,cy-8); ctx.fillStyle='#64748b'; ctx.font='11px Syne'; ctx.fillText('TOTAL',cx,cy+12); ctx.restore(); }}]
+  });
+}
+
+function renderChartDesc(data) {
+  const cnt={}; data.forEach(r=>{ cnt[r.descripcion]=(cnt[r.descripcion]||0)+1; });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]);
+  const top9=sorted.slice(0,9); const otros=sorted.slice(9).reduce((s,x)=>s+x[1],0);
+  const origLabels=[...top9.map(x=>x[0]),'__OTROS__'];
+  const labels=[...top9.map(x=>trunc(x[0],22)),'Otros'];
+  const values=[...top9.map(x=>x[1]),otros];
+  const total=values.reduce((a,b)=>a+b,0);
+  destroyChart('desc');
+  charts.desc = new Chart(document.getElementById('chart-desc'),{
+    type:'doughnut',
+    data:{ labels, datasets:[{ data:values, backgroundColor:PAL_ORANGE.slice(0,labels.length), borderWidth:2, borderColor:'#ffffff', hoverOffset:6 }] },
+    options:{ ...chartDefaults, cutout:'55%',
+      onClick:(e,els)=>{ if(!els.length) return; toggleChartFilter('descripcion', origLabels[els[0].index]); },
+      plugins:{...chartDefaults.plugins,
+      legend:{position:'right',labels:{color:'#475569',font:{family:'Syne',size:10},padding:8,boxWidth:8,usePointStyle:true,pointStyleWidth:6}},
+      tooltip:{...chartDefaults.plugins.tooltip, callbacks:{label:ctx=>`${ctx.parsed} (${(ctx.parsed/total*100).toFixed(1)}%)`}}
+    }}
+  });
+}
+
+function renderChartLinea(data) {
+  const cnt={}; data.forEach(r=>{ cnt[r.fecha]=(cnt[r.fecha]||0)+1; });
+  const allDates=Object.keys(cnt).sort();
+  if(!allDates.length){ destroyChart('linea'); return; }
+  const start=new Date(allDates[0]+'T12:00:00'), end=new Date(allDates[allDates.length-1]+'T12:00:00');
+  const isoLabels=[], values=[];
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    const k=d.toISOString().slice(0,10); isoLabels.push(k); values.push(cnt[k]||0);
+  }
+  const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const fmtL=k=>{ const d=new Date(k+'T12:00:00'); return d.getDate()+' '+m[d.getMonth()]; };
+  destroyChart('linea');
+  charts.linea = new Chart(document.getElementById('chart-linea'),{
+    type:'line',
+    data:{ labels:isoLabels.map(fmtL), datasets:[{ data:values, borderColor:'#ef4444', backgroundColor:'#ef444415', pointBackgroundColor:values.map(v=>v>0?'#ef4444':'transparent'), pointBorderColor:values.map(v=>v>0?'#ef4444':'transparent'), pointRadius:values.map(v=>v>0?4:2), pointHoverRadius:7, borderWidth:2, tension:.3, fill:true }] },
+    options:{ ...chartDefaults,
+      onClick:(e,els)=>{ if(!els.length) return; toggleChartFilter('fecha', isoLabels[els[0].index]); },
+      plugins:{...chartDefaults.plugins, legend:{display:false},
+        tooltip:{...chartDefaults.plugins.tooltip, callbacks:{title:ctx=>{ const i=ctx[0].dataIndex; return fmtFecha(isoLabels[i]); }}}
+      },
+      scales:{ x:{ticks:{color:'#475569',font:{family:'DM Mono',size:10},maxRotation:35},grid:{color:'#e2e8f080'},border:{color:'#cbd5e1'}}, y:{ticks:{color:'#475569',font:{family:'DM Mono',size:11},stepSize:2,beginAtZero:true},grid:{color:'#e2e8f0'},border:{color:'#cbd5e1'}} }
+    },
+    plugins:[{ id:'dl', afterDatasetsDraw(c){ const {ctx,data,scales:{x,y}}=c; data.datasets[0].data.forEach((v,i)=>{ if(!v) return; const px=x.getPixelForValue(i),py=y.getPixelForValue(v); ctx.save(); ctx.fillStyle='#ef4444'; ctx.font='600 10px DM Mono'; ctx.textAlign='center'; ctx.fillText(v,px,py-10); ctx.restore(); }); }}]
+  });
+}
+
+function renderTablaFechas(data) {
+  const cnt={}; data.forEach(r=>{ cnt[r.fecha]=(cnt[r.fecha]||0)+1; });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('tabla-fechas').innerHTML=sorted.map(([f,c],i)=>`
+    <div class="fecha-row">
+      <span style="color:var(--muted);font-family:var(--mono);font-size:11px;min-width:20px">${i+1}.</span>
+      <span style="margin-left:.5rem;flex:1;font-size:13px">${fmtFecha(f)}</span>
+      <span class="fecha-badge">${c}</span>
+    </div>`).join('');
+}
+
+function renderTopRef(data) {
+  const cnt={}; data.forEach(r=>{ cnt[r.descripcion]=(cnt[r.descripcion]||0)+Math.abs(r.unidades); });
+  const sorted=Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const max=sorted[0]?.[1]||1;
+  document.getElementById('tbody-top-ref').innerHTML=sorted.map(([d,v],i)=>`
+    <tr><td class="rank-num">${i+1}.</td><td style="max-width:160px">${trunc(d,26)}</td>
+    <td><div style="display:flex;align-items:center;gap:.5rem">
+      <div class="rank-bar-wrap" style="width:70px"><div class="rank-bar-fill" style="width:${Math.round(v/max*100)}%;background:#6366f1"></div></div>
+      <span style="color:var(--accent2);font-weight:600">${v}</span>
+    </div></td></tr>`).join('');
+}
+
+function renderZonas(data) {
+  const z={}; data.forEach(r=>{ const m=r.posicion.match(/^(\d{2}-[A-Z]\d?)/); if(!m) return; const k=m[1]; if(!z[k]) z[k]={casos:0,uds:0}; z[k].casos++; z[k].uds+=Math.abs(r.unidades); });
+  const sorted=Object.entries(z).sort((a,b)=>b[1].casos-a[1].casos).slice(0,8);
+  const mc=sorted[0]?.[1].casos||1, mu=Math.max(...sorted.map(x=>x[1].uds));
+  document.getElementById('tbody-zonas').innerHTML=sorted.map(([z,v],i)=>`
+    <tr><td class="rank-num">${i+1}.</td><td><strong style="color:var(--text)">${z}</strong></td>
+    <td><div style="display:flex;align-items:center;gap:.4rem"><div class="rank-bar-wrap" style="width:40px"><div class="rank-bar-fill" style="width:${Math.round(v.casos/mc*100)}%;background:#0ea5e9"></div></div><span style="color:var(--accent);font-weight:600">${v.casos}</span></div></td>
+    <td><div style="display:flex;align-items:center;gap:.4rem"><div class="rank-bar-wrap" style="width:40px"><div class="rank-bar-fill" style="width:${Math.round(v.uds/mu*100)}%;background:#f97316"></div></div><span style="color:var(--orange);font-weight:600">${v.uds}</span></div></td>
+    </tr>`).join('');
+}
+
+/* ========== DELETE ========== */
+let pendingDeleteId = null;
+function showDeleteModal(id) {
+  pendingDeleteId = id;
+  document.getElementById('modal-pin').value = '';
+  document.getElementById('modal-pin-err').style.display = 'none';
+  document.getElementById('modal-delete').style.display = 'flex';
+  setTimeout(() => document.getElementById('modal-pin').focus(), 60);
+}
+function cancelDelete() {
+  pendingDeleteId = null;
+  document.getElementById('modal-delete').style.display = 'none';
+}
+function confirmDelete() {
+  const pin = document.getElementById('modal-pin').value.trim();
+  if (pin !== DELETE_PIN) {
+    document.getElementById('modal-pin-err').style.display = 'block';
+    document.getElementById('modal-pin').value = '';
+    document.getElementById('modal-pin').focus();
+    return;
+  }
+  const r = records.find(x => x._id === pendingDeleteId);
+  if (r) {
+    deletedSet.add(fp(r));
+    persistDeleted();
+    delete localEdits[fp(r)];
+    persistEdits();
+    records = records.filter(x => x._id !== pendingDeleteId);
+    saveLocal();
+    fetch(SCRIPT_URL, {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'delete', plu:r.plu, posicion:r.posicion, fecha:r.fecha})}).catch(()=>{});
+    renderHistorial();
+    applyFilters();
+    showToast('Novedad eliminada');
+  }
+  cancelDelete();
+}
+
+/* ========== EDIT ========== */
+let editingId = null;
+function showEditModal(id) {
+  editingId = id;
+  const r = records.find(x => x._id === id);
+  if (!r) return;
+  document.getElementById('me-desc').value = r.descripcion || '';
+  document.getElementById('me-pos').value = r.posicion || '';
+  document.getElementById('me-uds').value = r.unidades || '';
+  document.getElementById('me-costo').value = r.costoUnitario || '';
+  document.getElementById('me-estado').value = r.estado || 'PENDIENTE';
+  document.getElementById('me-obs').value = r._obs || '';
+  const sel = document.getElementById('me-fab');
+  Array.from(sel.options).forEach(o => { if (o.dataset.dynamic) o.remove(); });
+  if (r.fabricante && !Array.from(sel.options).some(o => o.value === r.fabricante)) {
+    const opt = new Option(r.fabricante, r.fabricante);
+    opt.dataset.dynamic = '1';
+    sel.appendChild(opt);
+  }
+  sel.value = r.fabricante || '';
+  document.getElementById('modal-edit').style.display = 'flex';
+}
+function cancelEdit() {
+  editingId = null;
+  document.getElementById('modal-edit').style.display = 'none';
+}
+function saveEditModal() {
+  const r = records.find(x => x._id === editingId);
+  if (!r) return;
+  const origKey = fp(r);          // huella ANTES de cualquier cambio
+  const origPosicion = r.posicion; // para enviársela al script como clave de búsqueda
+  r.descripcion = document.getElementById('me-desc').value.trim() || r.descripcion;
+  r.posicion = document.getElementById('me-pos').value.trim().toUpperCase() || r.posicion;
+  r.unidades = parseInt(document.getElementById('me-uds').value) || r.unidades;
+  r.costoUnitario = parsePrecio(document.getElementById('me-costo').value) || r.costoUnitario;
+  r.costoIncidencia = r.costoUnitario * r.unidades;
+  r.fabricante = document.getElementById('me-fab').value || r.fabricante;
+  r.estado = document.getElementById('me-estado').value;
+  r._obs = document.getElementById('me-obs').value.trim();
+  // Guardar override local para que el sync no pise este cambio
+  localEdits[origKey] = {
+    descripcion: r.descripcion, posicion: r.posicion, unidades: r.unidades,
+    costoUnitario: r.costoUnitario, costoIncidencia: r.costoIncidencia,
+    fabricante: r.fabricante, estado: r.estado, _obs: r._obs
+  };
+  persistEdits();
+  // Enviar actualización a Google Sheets
+  fetch(SCRIPT_URL, {
+    method:'POST', mode:'no-cors',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      action:'update', plu:r.plu, posicion:origPosicion, fecha:r.fecha,
+      descripcion:r.descripcion, posicionNueva:r.posicion, unidades:r.unidades,
+      costoUnitario:r.costoUnitario, costoIncidencia:r.costoIncidencia,
+      fabricante:r.fabricante, estado:r.estado, obs:r._obs
+    })
+  }).catch(()=>{});
+  saveLocal();
+  cancelEdit();
+  renderHistorial();
+  applyFilters();
+  showToast('Novedad actualizada');
+}
+
+/* ========== NOTIFICATIONS ========== */
+function notifyAdmin(record) {
+  if (!('Notification' in window)) return;
+  const send = () => new Notification('Nueva novedad registrada', {
+    body: `PLU ${record.plu} — ${record.descripcion}\n📍 ${record.posicion} | ${record.unidades>0?'+':''}${record.unidades} uds`,
+    tag: 'nov-' + record._id
+  });
+  if (Notification.permission === 'granted') { send(); }
+  else if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(p => { if (p === 'granted') send(); });
+  }
+}
+
+/* ========== FORM ========== */
+function setFabricanteField(value) {
+  const sel = document.getElementById('f-fabricante');
+  Array.from(sel.options).forEach(o => { if (o.dataset.dynamic) o.remove(); });
+  if (!value) { sel.value = ''; return; }
+  if (!Array.from(sel.options).some(o => o.value === value)) {
+    const opt = new Option(value, value);
+    opt.dataset.dynamic = '1';
+    sel.appendChild(opt);
+  }
+  sel.value = value;
+}
+
+function checkCruce() {
+  const plu = parseInt(document.getElementById('f-plu').value) || null;
+  const pos = document.getElementById('f-posicion').value.trim().toUpperCase();
+
+  if (plu !== lastAutoFilledPLU) {
+    lastAutoFilledPLU = plu;
+    document.getElementById('f-descripcion').value = '';
+    document.getElementById('f-fabricante').value = '';
+    document.getElementById('f-costo').value = '';
+    if (plu) {
+      const f = records.find(r => r.plu === plu);
+      if (f) {
+        document.getElementById('f-descripcion').value = f.descripcion || '';
+        setFabricanteField(f.fabricante || '');
+        document.getElementById('f-costo').value = f.costoUnitario || '';
+      } else {
+        const m = lookupMaestro(plu);
+        if (m) {
+          document.getElementById('f-descripcion').value = m.descripcion || '';
+          setFabricanteField(m.fabricante || '');
+          document.getElementById('f-costo').value = m.precio || '';
+        }
+      }
+    }
+  }
+
+  if (!plu || !pos) { document.getElementById('alert-cruce').classList.remove('show'); return; }
+  const cruces = records.filter(r => r.plu === plu || r.posicion.toUpperCase() === pos);
+  if (!cruces.length) { document.getElementById('alert-cruce').classList.remove('show'); return; }
+  document.getElementById('alert-cruce').classList.add('show');
+  document.getElementById('alert-cruce-rows').innerHTML = cruces.slice(0,5).map(r => {
+    const tipo = r.plu===plu && r.posicion.toUpperCase()===pos ? '⚠ Mismo PLU + misma posición' : r.plu===plu ? '↩ Mismo PLU, otra posición' : '📍 Misma posición, otro PLU';
+    return `<div class="alert-cruce-row">${tipo} — PLU ${r.plu} | ${r.posicion} | ${r.unidades>0?'+':''}${r.unidades} uds | ${r.fecha}</div>`;
+  }).join('');
+}
+
+async function guardar() {
+  const plu=parseInt(document.getElementById('f-plu').value);
+  const pos=document.getElementById('f-posicion').value.trim();
+  const uds=parseInt(document.getElementById('f-unidades').value);
+  if(!plu||!pos||isNaN(uds)){ showToast('Completa PLU, posición y unidades',true); return; }
+  const costo=parseInt(document.getElementById('f-costo').value)||0;
+  const record = {
+    _id:'usr-'+Date.now(), _seed:false,
+    _obs:document.getElementById('f-obs').value.trim(),
+    _origen:'App',
+    plu, descripcion:document.getElementById('f-descripcion').value||'Sin descripción',
+    posicion:pos.toUpperCase(), unidades:uds,
+    fabricante:document.getElementById('f-fabricante').value||'SIN ASIGNAR',
+    estado:document.getElementById('f-estado').value,
+    fecha:new Date().toISOString().slice(0,10),
+    costoUnitario:costo, costoIncidencia:costo*uds
+  };
+
+  const btn = document.getElementById('btn-guardar');
+  const st = document.getElementById('save-status');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Guardando...';
+  st.textContent = '';
+
+  records.push(record);
+  saveLocal();
+
+  try {
+    await writeToSheets(record);
+    st.style.color = 'var(--green)';
+    st.textContent = '✓ Guardado en Google Sheets';
+    showToast('Novedad guardada en Sheets');
+    notifyAdmin(record);
+  } catch(e) {
+    st.style.color = 'var(--amber)';
+    st.textContent = '⚠ Guardado local (sin conexión)';
+    showToast('Guardado localmente', false);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Guardar novedad';
+  limpiarForm();
+  applyFilters();
+  setTimeout(()=>{ st.textContent=''; }, 4000);
+}
+
+function limpiarForm() {
+  ['f-plu','f-posicion','f-descripcion','f-unidades','f-costo','f-obs'].forEach(id=>document.getElementById(id).value='');
+  setFabricanteField('');
+  document.getElementById('f-estado').value='PENDIENTE';
+  document.getElementById('alert-cruce').classList.remove('show');
+  lastAutoFilledPLU = null;
+}
+
+/* ========== HISTORIAL ========== */
+function renderHistorial() {
+  const fp=document.getElementById('hfil-plu').value.trim();
+  const fpos=document.getElementById('hfil-pos').value.trim().toUpperCase();
+  const fe=document.getElementById('hfil-est').value;
+  const ff=document.getElementById('hfil-fab').value;
+  let d=[...records].reverse();
+  if(fp) d=d.filter(r=>String(r.plu).includes(fp));
+  if(fpos) d=d.filter(r=>r.posicion.toUpperCase().includes(fpos));
+  if(fe) d=d.filter(r=>r.estado===fe);
+  if(ff) d=d.filter(r=>r.fabricante===ff);
+  document.getElementById('hist-count').textContent=`Mostrando ${d.length} de ${records.length} novedades`;
+  document.getElementById('tbody-hist').innerHTML=d.map(r=>`
+    <tr>
+      <td>${r.plu}</td>
+      <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.descripcion}</td>
+      <td style="font-size:11px">${r.posicion}</td>
+      <td style="color:${r.unidades<0?'var(--red)':'var(--green)'}">${r.unidades>0?'+':''}${r.unidades}</td>
+      <td style="font-size:11px">${r.fabricante}</td>
+      <td>${estadoBadge(r.estado)}</td>
+      <td>${r.fecha}</td>
+      <td style="color:${r.costoIncidencia<0?'var(--red)':'var(--green)'};font-size:11px;white-space:nowrap">${fmtCOP(r.costoIncidencia)}</td>
+      <td><span class="badge ${r._seed?'badge-blue':r._origen==='App'?'badge-green':'badge-amber'}">${r._seed?'Histórico':r._origen||'App'}</span></td>
+      <td><div style="display:flex;gap:.35rem;justify-content:flex-end">
+        <button class="btn-icon" onclick="showEditModal('${r._id}')" title="Editar">✏</button>
+        <button class="btn-icon del" onclick="showDeleteModal('${r._id}')" title="Eliminar">✕</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function clearHFilters() {
+  ['hfil-plu','hfil-pos'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('hfil-est').value=''; document.getElementById('hfil-fab').value='';
+  renderHistorial();
+}
+
+/* ========== EXPORT ========== */
+function exportCSV() {
+  const cols=['PLU','Descripcion','Posicion','Unidades','Fabricante','Estado','Fecha','CostoUnitario','CostoIncidencia','Observacion'];
+  const rows=records.map(r=>[r.plu,r.descripcion,r.posicion,r.unidades,r.fabricante,r.estado,r.fecha,r.costoUnitario,r.costoIncidencia,r._obs||''].join(';'));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent([cols.join(';'),...rows].join('\n'));
+  a.download='novedades-muebles-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+/* ========== TOAST ========== */
+function showToast(msg, err=false) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(err?' err':'');
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+/* ========== INIT ========== */
+FABS.forEach(f=>{ const o=document.createElement('option'); o.value=o.textContent=f; document.getElementById('fil-fab').appendChild(o); });
+if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+loadLocal();
+renderDashboard(records);
+loadMaestro();
+syncFromSheets();
+setInterval(syncFromSheets, 60000);
+setInterval(loadMaestro, 300000);
+</script>
+</body>
+</html>

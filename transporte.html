@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<title>Transporte — Guardados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#f5f7fa;--surface:#ffffff;--surface2:#f1f5f9;--border:#e2e8f0;
+  --accent:#f97316;--accent2:#6366f1;--green:#10b981;--red:#ef4444;
+  --amber:#f59e0b;--blue:#0ea5e9;--text:#0f172a;--muted:#64748b;--muted2:#475569;
+  --shadow:0 1px 3px #0f172a14;--shadow-lg:0 4px 14px #0f172a1a;
+  --sans:'Syne',sans-serif;--mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;font-size:14px;}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+.nav-brand{font-size:14px;font-weight:800;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;padding:1rem 1.5rem 1rem 0;white-space:nowrap;border-right:1px solid var(--border);margin-right:1rem;}
+.nav-brand span{color:var(--muted2);font-weight:400;}
+.nav-tabs{display:flex;gap:0;flex:1;overflow-x:auto;}
+.nav-tab{padding:.9rem 1.2rem;font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s,border-color .15s;}
+.nav-tab.active{color:var(--text);border-bottom-color:var(--accent);}
+.nav-tab:hover{color:var(--text);}
+.back-link{font-size:11px;font-weight:700;color:var(--muted);text-decoration:none;letter-spacing:.05em;padding:.45rem .875rem;border:1px solid var(--border);border-radius:8px;white-space:nowrap;transition:color .15s,border-color .15s;flex-shrink:0;}
+.back-link:hover{color:var(--blue);border-color:var(--blue);}
+
+.view{display:none;padding:1.5rem;max-width:1400px;margin:0 auto;}
+.view.active{display:block;}
+.dash-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;}
+.dash-title{font-size:22px;font-weight:800;letter-spacing:-.01em;}
+.dash-sub{font-size:12px;color:var(--muted);margin-top:2px;font-weight:400;}
+
+.filter-bar{display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin-bottom:1rem;box-shadow:var(--shadow);}
+.filter-bar label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.filter-group{display:flex;flex-direction:column;gap:.3rem;min-width:0;}
+.filter-input{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.45rem .85rem;font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s,box-shadow .15s;min-width:130px;}
+.filter-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #f9731624;}
+select.filter-input option{background:var(--surface);}
+.kpi-total{margin-left:auto;background:var(--accent);color:#ffffff;border-radius:10px;padding:.5rem 1.2rem;text-align:center;box-shadow:0 2px 6px #f9731655;}
+.kpi-total-label{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;}
+.kpi-total-val{font-size:28px;font-weight:800;font-family:var(--mono);line-height:1;}
+
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;border-left:3px solid var(--accent);box-shadow:var(--shadow);transition:transform .15s,box-shadow .15s;}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.kpi-card.amber{border-left-color:var(--amber);}.kpi-card.green{border-left-color:var(--green);}.kpi-card.red{border-left-color:var(--red);}.kpi-card.orange{border-left-color:var(--accent);}
+.kpi-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.kpi-val{font-size:24px;font-weight:800;font-family:var(--mono);}
+.kpi-val.orange{color:var(--accent);}.kpi-val.amber{color:var(--amber);}.kpi-val.green{color:var(--green);}.kpi-val.red{color:var(--red);}
+
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;}
+.grid-5-3{display:grid;grid-template-columns:5fr 3fr;gap:1rem;margin-bottom:1rem;}
+@media(max-width:900px){.grid-2,.grid-5-3{grid-template-columns:1fr;}}
+
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;box-shadow:var(--shadow);}
+.card-title{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;}
+.card-title::before{content:'';display:inline-block;width:3px;height:14px;border-radius:2px;background:var(--accent);}
+.card-title.amber::before{background:var(--amber);}.card-title.green::before{background:var(--green);}.card-title.red::before{background:var(--red);}
+.chart-wrap{position:relative;}
+
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.5rem;max-width:660px;margin:0 auto;box-shadow:var(--shadow);}
+.form-title{font-size:18px;font-weight:800;margin-bottom:1.5rem;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media(max-width:520px){.form-grid{grid-template-columns:1fr;}}
+.form-group{display:flex;flex-direction:column;gap:.4rem;}
+.form-group.full{grid-column:1/-1;}
+.form-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.form-input{background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.65rem .9rem;font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #f9731624;}
+textarea.form-input{resize:vertical;min-height:72px;}
+
+.alert-dup{background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.25rem;display:none;}
+.alert-dup.show{display:block;}
+.alert-dup-title{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#c2410c;margin-bottom:.4rem;}
+.alert-dup-msg{font-size:12px;font-family:var(--mono);color:#c2410c;}
+
+.btn{padding:.65rem 1.5rem;border-radius:8px;font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.04em;cursor:pointer;border:none;transition:opacity .15s,transform .1s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--accent);color:#ffffff;box-shadow:0 1px 3px #f9731644;}
+.btn-primary:hover{background:#ea580c;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);background:#f973160d;}
+.btn-danger{background:var(--red);color:#ffffff;border:1px solid #dc2626;}
+.btn-danger:hover{background:#dc2626;}
+.btn-success{background:var(--green);color:#ffffff;border:1px solid #059669;}
+.btn-success:hover{background:#059669;}
+.form-actions{display:flex;gap:.75rem;margin-top:1.5rem;flex-wrap:wrap;align-items:center;}
+
+.hist-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;}
+.hist-table{width:100%;border-collapse:collapse;font-size:12px;}
+.hist-table thead tr{background:var(--surface2);}
+.hist-table th{padding:.65rem .9rem;text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;white-space:nowrap;}
+.hist-table td{padding:.6rem .9rem;border-top:1px solid var(--border);font-family:var(--mono);vertical-align:middle;}
+.hist-table tr:hover td{background:var(--surface2);}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
+.badge-green{background:#10b98120;color:#047857;}
+.badge-amber{background:#f59e0b20;color:#b45309;}
+.badge-red{background:#ef444420;color:#b91c1c;}
+.badge-orange{background:#f9731620;color:#c2410c;}
+.badge-blue{background:#0ea5e920;color:#0369a1;}
+
+/* Alertas urgency rows */
+.urgencia-vencida{background:#fef2f2 !important;}
+.urgencia-vencida td{color:#b91c1c;}
+.urgencia-proxima{background:#fffbeb !important;}
+
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#ffffff;padding:.75rem 1.75rem;border-radius:8px;font-size:13px;font-weight:700;transition:transform .3s ease;z-index:999;white-space:nowrap;box-shadow:0 4px 14px #10b98155;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.toast.err{background:var(--red);box-shadow:0 4px 14px #ef444455;}
+.toast.warn{background:var(--amber);box-shadow:0 4px 14px #f59e0b55;}
+
+.modal-overlay{position:fixed;inset:0;background:#00000099;z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.75rem;max-width:500px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:.4rem;}
+.modal-sub{font-size:13px;color:var(--muted2);margin-bottom:1.25rem;}
+.modal-actions{display:flex;gap:.75rem;margin-top:1.5rem;flex-wrap:wrap;}
+.pin-input{letter-spacing:.5em;text-align:center;font-size:24px;font-family:var(--mono);max-width:160px;}
+.btn-icon{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;transition:background .15s,color .15s,border-color .15s;padding:0;line-height:1;}
+.btn-icon:hover{background:var(--surface2);color:var(--text);border-color:var(--accent);}
+.btn-icon.del:hover{background:#fef2f2;color:var(--red);border-color:#fecaca;}
+.btn-icon.ok:hover{background:#f0fdf4;color:var(--green);border-color:#bbf7d0;}
+
+.fecha-hidden{display:none;}
+
+/* Alertas table */
+.alert-strip{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;box-shadow:var(--shadow);margin-bottom:1rem;}
+.alert-row{display:flex;align-items:center;gap:.75rem;padding:.55rem .5rem;border-bottom:1px solid var(--border);font-size:12px;}
+.alert-row:last-child{border-bottom:none;}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.alert-empty{color:var(--muted);font-size:13px;padding:.5rem;text-align:center;}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+
+@media(max-width:640px){
+  nav{padding:0 .75rem;}
+  .nav-brand{font-size:11px;padding:.65rem .65rem .65rem 0;margin-right:.4rem;letter-spacing:.07em;}
+  .nav-tab{padding:.65rem .65rem;font-size:9.5px;letter-spacing:.04em;}
+  .back-link{font-size:10px;padding:.35rem .6rem;}
+  .view{padding:.875rem .625rem;}
+  .dash-title{font-size:17px;}
+  .kpi-strip{grid-template-columns:1fr 1fr;gap:.5rem;}
+  .kpi-val{font-size:20px;}
+  .form-card{padding:1rem .875rem;border-radius:10px;}
+  .modal-box{padding:1.25rem;}
+  .filter-bar{flex-direction:column;align-items:stretch;gap:.55rem;}
+  .filter-group{width:100%;}
+  .filter-group .filter-input,.filter-bar>.filter-input{width:100%!important;min-width:unset!important;}
+  .kpi-total{margin-left:0;width:100%;}
+}
+@media(max-width:400px){
+  .nav-brand span{display:none;}
+  .nav-tab{font-size:9px;padding:.6rem .5rem;}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-brand">Transporte <span>/ Guardados</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('dashboard',this)">Dashboard</button>
+    <button class="nav-tab" onclick="showView('form',this)">Registrar</button>
+    <button class="nav-tab" onclick="showView('lista',this)">Lista</button>
+  </div>
+  <a href="index.html" class="back-link">← Muebles</a>
+</nav>
+
+<!-- ======== DASHBOARD ======== -->
+<div id="view-dashboard" class="view active">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">Panel de Control — Transporte Guardados</div>
+      <div class="dash-sub" id="dash-sub">Cargando...</div>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" style="font-size:11px" onclick="showView('form',document.querySelectorAll('.nav-tab')[1])">+ Registrar</button>
+      <button class="btn btn-ghost" style="font-size:11px" onclick="exportCSV()">↓ Exportar CSV</button>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <label>Buscar</label>
+      <input type="text" class="filter-input" id="df-q" placeholder="Doc / Ubicación" style="width:180px" oninput="renderDashboard()">
+    </div>
+    <div class="filter-group">
+      <label>Estado</label>
+      <select class="filter-input" id="df-est" onchange="renderDashboard()" style="width:190px">
+        <option value="">Todos</option>
+        <option>PENDIENTE DESPACHO</option>
+        <option>DESPACHADO</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Desde</label>
+      <input type="date" class="filter-input" id="df-desde" onchange="renderDashboard()" style="width:150px">
+    </div>
+    <div class="filter-group">
+      <label>Hasta</label>
+      <input type="date" class="filter-input" id="df-hasta" onchange="renderDashboard()" style="width:150px">
+    </div>
+    <button class="btn btn-ghost" style="font-size:10px;padding:.4rem .8rem" onclick="clearDFilters()">Limpiar</button>
+    <div class="kpi-total">
+      <div class="kpi-total-label">Total registros</div>
+      <div class="kpi-total-val" id="kpi-total-val">—</div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi-card orange"><div class="kpi-lbl">Total guardados</div><div class="kpi-val orange" id="kpi-total">—</div></div>
+    <div class="kpi-card amber"><div class="kpi-lbl">Pendiente despacho</div><div class="kpi-val amber" id="kpi-pendiente">—</div></div>
+    <div class="kpi-card green"><div class="kpi-lbl">Despachados</div><div class="kpi-val green" id="kpi-despachado">—</div></div>
+    <div class="kpi-card red"><div class="kpi-lbl">Entregas vencidas</div><div class="kpi-val red" id="kpi-vencidas">—</div></div>
+  </div>
+
+  <div class="grid-5-3">
+    <div class="chart-card">
+      <div class="card-title">Ingresos y despachos por fecha</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="chart-bar"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title green">Estado actual de guardados</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="chart-donut"></canvas></div>
+    </div>
+  </div>
+
+  <div class="alert-strip">
+    <div class="card-title red" style="margin-bottom:.75rem">Alertas de entrega — guardados pendientes con fecha comprometida</div>
+    <div id="alertas-content"></div>
+  </div>
+</div>
+
+<!-- ======== REGISTRAR ======== -->
+<div id="view-form" class="view">
+  <div class="form-card">
+    <div class="form-title">Registrar guardado</div>
+    <div class="alert-dup" id="alert-dup">
+      <div class="alert-dup-title">⚠ Registro duplicado</div>
+      <div class="alert-dup-msg" id="alert-dup-msg"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Fecha ingreso *</label>
+        <input type="date" class="form-input" id="f-fecha">
+      </div>
+      <div class="form-group">
+        <label class="form-label">N° Documento *</label>
+        <input type="text" class="form-input" id="f-doc" placeholder="Ej: Ovdm 108570" oninput="checkDup()">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Ubicación *</label>
+        <input type="text" class="form-input" id="f-ubic" list="ubic-options" placeholder="Ej: T-05-C-26-02-01" oninput="checkDup()">
+        <datalist id="ubic-options">
+          <option value="Estantería transporte">
+          <option value="T-05-B-26-02-01">
+          <option value="T-05-B-26-05-01">
+          <option value="T-05-B-26-06-01">
+          <option value="T-05-B-26-06-02">
+          <option value="T-05-C-26-02-01">
+          <option value="T-05-C-26-02-02">
+          <option value="T-05-C-26-03-01">
+          <option value="T-05-C-26-03-02">
+          <option value="T-05-C-26-04-01">
+          <option value="T-05-C-26-04-02">
+          <option value="T-05-C-26-05-02">
+          <option value="T-05-C-26-06-01">
+          <option value="T-05-C-26-06-02">
+          <option value="05-J-22-01-01">
+          <option value="05-J-23-01-01">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-input" id="f-estado" onchange="toggleFechaDespacho('f-fecha-despacho-grp')">
+          <option value="PENDIENTE DESPACHO">PENDIENTE DESPACHO</option>
+          <option value="DESPACHADO">DESPACHADO</option>
+        </select>
+      </div>
+      <div class="form-group" id="f-fecha-despacho-grp" style="display:none">
+        <label class="form-label">Fecha despacho</label>
+        <input type="date" class="form-input" id="f-fdespacho">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Nota</label>
+        <textarea class="form-input" id="f-nota" placeholder="Ej: entregar 27/05/2026 · cliente: ..."></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" id="btn-guardar" onclick="guardar()">Guardar</button>
+      <button class="btn btn-ghost" onclick="limpiarForm()">Limpiar</button>
+      <span id="save-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ======== LISTA ======== -->
+<div id="view-lista" class="view">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem">
+    <div style="font-size:20px;font-weight:800">Lista de guardados</div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <button class="btn btn-ghost" style="font-size:11px" onclick="exportCSV()">↓ Exportar CSV</button>
+    </div>
+  </div>
+  <div class="filter-bar" style="margin-bottom:1rem">
+    <input type="text" class="filter-input" id="lf-q" placeholder="Documento / Ubicación" style="min-width:200px" oninput="renderLista()">
+    <select class="filter-input" id="lf-est" onchange="renderLista()" style="width:200px">
+      <option value="">Todos los estados</option>
+      <option>PENDIENTE DESPACHO</option>
+      <option>DESPACHADO</option>
+    </select>
+    <input type="date" class="filter-input" id="lf-desde" onchange="renderLista()" title="Desde">
+    <input type="date" class="filter-input" id="lf-hasta" onchange="renderLista()" title="Hasta">
+    <button class="btn btn-ghost" style="font-size:11px;padding:.4rem .9rem" onclick="clearLFilters()">Limpiar</button>
+  </div>
+  <div class="hist-wrap">
+    <table class="hist-table">
+      <thead>
+        <tr>
+          <th>Fecha ingreso</th>
+          <th>N° Documento</th>
+          <th>Ubicación</th>
+          <th>Estado</th>
+          <th>Fecha despacho</th>
+          <th>Entrega</th>
+          <th>Nota</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody-lista"></tbody>
+    </table>
+  </div>
+  <div id="lista-count" style="font-size:11px;color:var(--muted);margin-top:.75rem"></div>
+</div>
+
+<!-- ======== MODAL EDITAR ======== -->
+<div id="modal-edit" class="modal-overlay" style="display:none" onclick="if(event.target===this)cancelEdit()">
+  <div class="modal-box">
+    <div class="modal-title">Editar guardado</div>
+    <div class="modal-sub" id="modal-edit-sub"></div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Ubicación</label>
+        <input type="text" class="form-input" id="me-ubic" list="ubic-options-m">
+        <datalist id="ubic-options-m">
+          <option value="Estantería transporte">
+          <option value="T-05-B-26-02-01">
+          <option value="T-05-B-26-05-01">
+          <option value="T-05-B-26-06-01">
+          <option value="T-05-B-26-06-02">
+          <option value="T-05-C-26-02-01">
+          <option value="T-05-C-26-02-02">
+          <option value="T-05-C-26-03-01">
+          <option value="T-05-C-26-03-02">
+          <option value="T-05-C-26-04-01">
+          <option value="T-05-C-26-04-02">
+          <option value="T-05-C-26-05-02">
+          <option value="T-05-C-26-06-01">
+          <option value="T-05-C-26-06-02">
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-input" id="me-estado" onchange="toggleFechaDespacho('me-fdesp-grp')">
+          <option value="PENDIENTE DESPACHO">PENDIENTE DESPACHO</option>
+          <option value="DESPACHADO">DESPACHADO</option>
+        </select>
+      </div>
+      <div class="form-group" id="me-fdesp-grp">
+        <label class="form-label">Fecha despacho</label>
+        <input type="date" class="form-input" id="me-fdesp">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Nota</label>
+        <textarea class="form-input" id="me-nota" rows="2"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEdit()">Guardar cambios</button>
+      <button class="btn btn-success" onclick="marcarDespachado()">✓ Marcar despachado</button>
+      <button class="btn btn-ghost" onclick="cancelEdit()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== MODAL ELIMINAR ======== -->
+<div id="modal-delete" class="modal-overlay" style="display:none" onclick="if(event.target===this)cancelDelete()">
+  <div class="modal-box">
+    <div class="modal-title">Eliminar guardado</div>
+    <div class="modal-sub">Ingresa el código de seguridad de 4 dígitos para confirmar la eliminación.</div>
+    <input type="password" id="modal-pin" class="form-input pin-input" maxlength="4" inputmode="numeric" placeholder="····"
+      oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+      onkeydown="if(event.key==='Enter')confirmDelete()">
+    <div id="modal-pin-err" style="color:var(--red);font-size:12px;margin-top:.5rem;display:none">Código incorrecto.</div>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="confirmDelete()">Eliminar</button>
+      <button class="btn btn-ghost" onclick="cancelDelete()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ========== CONSTANTES ========== */
+const STORAGE_KEY = 'transport-guardados-v1';
+const DELETE_PIN = '0000'; // ← Cambia a tu PIN secreto
+
+/* ========== SEED (datos históricos del CSV) ========== */
+const SEED = [
+  {_id:'s0',  fecha:'2026-04-17', documento:'Fact 33950',   ubicacion:'T-05-C-26-02-01',      estado:'DESPACHADO',        fechaDespacho:'2026-05-06', nota:''},
+  {_id:'s1',  fecha:'2026-04-17', documento:'Ovdm 88400',   ubicacion:'T-05-C-26-03-01',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s2',  fecha:'2026-04-17', documento:'Ovdm 93784',   ubicacion:'T-05-C-26-04-01',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s3',  fecha:'2026-04-17', documento:'Ovdm 93784',   ubicacion:'T-05-B-26-06-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s4',  fecha:'2026-04-17', documento:'Ovdm 103153',  ubicacion:'T-05-C-26-06-01',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s5',  fecha:'2026-04-17', documento:'Ovdm 103153',  ubicacion:'T-05-B-26-06-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s6',  fecha:'2026-04-17', documento:'Ovdm 107395',  ubicacion:'T-05-C-26-03-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s7',  fecha:'2026-04-17', documento:'Ovdm 107396',  ubicacion:'T-05-C-26-04-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s8',  fecha:'2026-04-17', documento:'Ovdm 102409',  ubicacion:'T-05-C-26-05-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s9',  fecha:'2026-04-17', documento:'Ovdm 98747',   ubicacion:'T-05-C-26-05-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s10', fecha:'2026-04-17', documento:'Ovdm 98747',   ubicacion:'T-05-C-26-06-02',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s11', fecha:'2026-04-17', documento:'Ovdm 105981',  ubicacion:'T-05-B-26-02-01',      estado:'DESPACHADO',        fechaDespacho:'2026-04-28', nota:''},
+  {_id:'s12', fecha:'2026-04-17', documento:'Ovdm 104781',  ubicacion:'T-05-B-26-06-01',      estado:'DESPACHADO',        fechaDespacho:'2026-05-14', nota:''},
+  {_id:'s13', fecha:'2026-04-17', documento:'Ovdm 104721',  ubicacion:'T-05-B-26-02-02',      estado:'DESPACHADO',        fechaDespacho:'2026-05-05', nota:''},
+  {_id:'s14', fecha:'2026-04-17', documento:'Ovdm 90402',   ubicacion:'05-J-22-01-01',        estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s15', fecha:'2026-04-17', documento:'Ovdm 103937',  ubicacion:'05-J-23-01-01',        estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s16', fecha:'2026-04-17', documento:'Ovdm 106505',  ubicacion:'Estantería transporte', estado:'DESPACHADO',        fechaDespacho:'2026-04-29', nota:''},
+  {_id:'s17', fecha:'2026-04-17', documento:'Ovdm 106707',  ubicacion:'Estantería transporte', estado:'DESPACHADO',        fechaDespacho:'2026-04-29', nota:''},
+  {_id:'s18', fecha:'2026-04-17', documento:'Ovdm 105871',  ubicacion:'Estantería transporte', estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:''},
+  {_id:'s19', fecha:'2026-04-30', documento:'Ovdm 107077',  ubicacion:'Estantería transporte', estado:'DESPACHADO',        fechaDespacho:'2026-04-30', nota:''},
+  {_id:'s20', fecha:'2026-05-04', documento:'Ovdm 109245',  ubicacion:'Estantería transporte', estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:'entregar 27/05/2026'},
+  {_id:'s21', fecha:'2026-05-06', documento:'Ovdm 108370',  ubicacion:'Estantería transporte', estado:'DESPACHADO',        fechaDespacho:'2026-05-12', nota:'entregar 14/05/2026'},
+  {_id:'s22', fecha:'2026-05-06', documento:'Ovdm 108570',  ubicacion:'T-05-B-26-02-01',      estado:'PENDIENTE DESPACHO',fechaDespacho:'',           nota:'entregar 15/05/2026'},
+  {_id:'s23', fecha:'2026-05-07', documento:'Ovdm 108562',  ubicacion:'T-05-C-26-02-02',      estado:'DESPACHADO',        fechaDespacho:'2026-05-15', nota:'entregar 18/05/2026'},
+  {_id:'s24', fecha:'2026-05-07', documento:'Ovdm 109687',  ubicacion:'T-05-C-26-02-01',      estado:'DESPACHADO',        fechaDespacho:'2026-05-15', nota:'entregar 19/05/2026'},
+  {_id:'s25', fecha:'2026-05-19', documento:'Ovdm 101611',  ubicacion:'T-05-B-26-05-01',      estado:'DESPACHADO',        fechaDespacho:'2026-05-25', nota:''},
+];
+
+/* ========== STATE ========== */
+let guardados = [];
+let editingId = null;
+let deletingId = null;
+let charts = {};
+
+/* ========== STORAGE ========== */
+function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(guardados)); }
+function loadLocal() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    guardados = JSON.parse(saved);
+  } else {
+    guardados = SEED.map(s => ({...s}));
+    saveLocal();
+  }
+}
+
+/* ========== UTILS ========== */
+function genId() { return 't' + Date.now() + Math.random().toString(36).slice(2,6); }
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtFecha(iso) {
+  if (!iso) return '—';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+// Parse "entregar DD/MM/YYYY" or "entregar DD-MM-YYYY" from nota
+function parseEntrega(nota) {
+  if (!nota) return null;
+  const m = nota.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (!m) return null;
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+function diasDesde(isoFecha) {
+  const diff = new Date(today()) - new Date(isoFecha);
+  return Math.floor(diff / 86400000);
+}
+function urgencia(g) {
+  if (g.estado === 'DESPACHADO') return null;
+  const entrega = parseEntrega(g.nota);
+  if (!entrega) return null;
+  const dias = new Date(today()) - new Date(entrega);
+  const dNum = Math.floor(dias / 86400000);
+  if (dNum > 0) return { tipo: 'vencida', dias: dNum, entrega };
+  if (dNum >= -3) return { tipo: 'proxima', dias: -dNum, entrega };
+  return { tipo: 'ok', dias: -dNum, entrega };
+}
+function estadoBadge(estado) {
+  if (estado === 'DESPACHADO') return '<span class="badge badge-green">Despachado</span>';
+  return '<span class="badge badge-amber">Pendiente despacho</span>';
+}
+
+/* ========== VIEWS ========== */
+function showView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id === 'dashboard') renderDashboard();
+  if (id === 'lista') renderLista();
+  if (id === 'form') { setDefaultFecha(); checkDup(); }
+}
+
+/* ========== FILTERS ========== */
+function filteredData() {
+  const q = (document.getElementById('df-q')?.value || '').toLowerCase();
+  const est = document.getElementById('df-est')?.value || '';
+  const desde = document.getElementById('df-desde')?.value || '';
+  const hasta = document.getElementById('df-hasta')?.value || '';
+  return guardados.filter(g => {
+    if (q && !g.documento.toLowerCase().includes(q) && !g.ubicacion.toLowerCase().includes(q)) return false;
+    if (est && g.estado !== est) return false;
+    if (desde && g.fecha < desde) return false;
+    if (hasta && g.fecha > hasta) return false;
+    return true;
+  });
+}
+function clearDFilters() {
+  ['df-q','df-desde','df-hasta'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('df-est').value = '';
+  renderDashboard();
+}
+function clearLFilters() {
+  document.getElementById('lf-q').value = '';
+  document.getElementById('lf-est').value = '';
+  document.getElementById('lf-desde').value = '';
+  document.getElementById('lf-hasta').value = '';
+  renderLista();
+}
+
+/* ========== DASHBOARD ========== */
+function renderDashboard() {
+  const data = filteredData();
+  const total = data.length;
+  const pendientes = data.filter(g => g.estado === 'PENDIENTE DESPACHO');
+  const despachados = data.filter(g => g.estado === 'DESPACHADO');
+  const vencidas = pendientes.filter(g => { const u = urgencia(g); return u && u.tipo === 'vencida'; });
+
+  document.getElementById('kpi-total-val').textContent = total;
+  document.getElementById('kpi-total').textContent = total;
+  document.getElementById('kpi-pendiente').textContent = pendientes.length;
+  document.getElementById('kpi-despachado').textContent = despachados.length;
+  document.getElementById('kpi-vencidas').textContent = vencidas.length;
+
+  const pct = total ? Math.round(despachados.length / total * 100) : 0;
+  document.getElementById('dash-sub').textContent =
+    `${total} guardados · ${pct}% tasa de despacho · actualizado ${new Date().toLocaleTimeString('es-CO')}`;
+
+  renderBarChart(data);
+  renderDonutChart(pendientes.length, despachados.length);
+  renderAlertas(guardados); // alertas siempre del total
+}
+
+function renderBarChart(data) {
+  // Agrupar por fecha
+  const map = {};
+  data.forEach(g => {
+    map[g.fecha] = map[g.fecha] || { ingresos: 0, despachos: 0 };
+    map[g.fecha].ingresos++;
+    if (g.estado === 'DESPACHADO' && g.fechaDespacho) {
+      map[g.fechaDespacho] = map[g.fechaDespacho] || { ingresos: 0, despachos: 0 };
+      map[g.fechaDespacho].despachos++;
+    }
+  });
+  const labels = Object.keys(map).sort();
+  const ingresos = labels.map(l => map[l]?.ingresos || 0);
+  const despachos = labels.map(l => map[l]?.despachos || 0);
+
+  if (charts.bar) { charts.bar.destroy(); }
+  const ctx = document.getElementById('chart-bar').getContext('2d');
+  charts.bar = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.map(fmtFecha),
+      datasets: [
+        { label: 'Ingresos', data: ingresos, backgroundColor: '#f9731688', borderColor: '#f97316', borderWidth: 1, borderRadius: 4 },
+        { label: 'Despachos', data: despachos, backgroundColor: '#10b98188', borderColor: '#10b981', borderWidth: 1, borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { font: { family: "'DM Mono'" }, boxWidth: 12, padding: 16 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: "'DM Mono'", size: 10 }, maxRotation: 45 } },
+        y: { grid: { color: '#e2e8f0' }, ticks: { font: { family: "'DM Mono'", size: 10 }, stepSize: 1 }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+function renderDonutChart(pendientes, despachados) {
+  if (charts.donut) { charts.donut.destroy(); }
+  const ctx = document.getElementById('chart-donut').getContext('2d');
+  const total = pendientes + despachados;
+  charts.donut = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pendiente despacho', 'Despachado'],
+      datasets: [{ data: [pendientes, despachados], backgroundColor: ['#f59e0b', '#10b981'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { family: "'DM Mono'", size: 11 }, padding: 16, boxWidth: 12 } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw} (${total ? Math.round(ctx.raw/total*100) : 0}%)` } }
+      }
+    }
+  });
+}
+
+function renderAlertas(data) {
+  const pendientes = data.filter(g => g.estado === 'PENDIENTE DESPACHO');
+  const alertas = pendientes
+    .map(g => ({ g, u: urgencia(g) }))
+    .filter(x => x.u !== null)
+    .sort((a, b) => {
+      const ord = { vencida: 0, proxima: 1, ok: 2 };
+      return (ord[a.u.tipo] - ord[b.u.tipo]) || (a.u.tipo === 'vencida' ? b.u.dias - a.u.dias : a.u.dias - b.u.dias);
+    });
+
+  const container = document.getElementById('alertas-content');
+  if (alertas.length === 0) {
+    container.innerHTML = '<div class="alert-empty">Sin alertas de entrega activas</div>';
+    return;
+  }
+
+  container.innerHTML = alertas.map(({ g, u }) => {
+    const dotColor = u.tipo === 'vencida' ? 'var(--red)' : u.tipo === 'proxima' ? 'var(--amber)' : 'var(--green)';
+    const label = u.tipo === 'vencida'
+      ? `<span class="badge badge-red">Vencida hace ${u.dias} día${u.dias > 1 ? 's' : ''}</span>`
+      : u.tipo === 'proxima'
+      ? `<span class="badge badge-amber">Vence en ${u.dias} día${u.dias > 1 ? 's' : ''}</span>`
+      : `<span class="badge badge-blue">Entrega en ${u.dias} días</span>`;
+    return `<div class="alert-row">
+      <div class="alert-dot" style="background:${dotColor}"></div>
+      <span style="font-family:var(--mono);font-weight:500;min-width:130px">${g.documento}</span>
+      <span style="font-size:11px;color:var(--muted2);flex:1">${g.ubicacion}</span>
+      <span style="font-size:11px;color:var(--muted)">Entrega: ${fmtFecha(u.entrega)}</span>
+      ${label}
+      <button class="btn-icon ok" onclick="openEdit('${g._id}')" title="Editar">✏</button>
+    </div>`;
+  }).join('');
+}
+
+/* ========== LISTA ========== */
+function renderLista() {
+  const q = (document.getElementById('lf-q')?.value || '').toLowerCase();
+  const est = document.getElementById('lf-est')?.value || '';
+  const desde = document.getElementById('lf-desde')?.value || '';
+  const hasta = document.getElementById('lf-hasta')?.value || '';
+
+  let data = [...guardados].sort((a,b) => b.fecha.localeCompare(a.fecha));
+  if (q) data = data.filter(g => g.documento.toLowerCase().includes(q) || g.ubicacion.toLowerCase().includes(q));
+  if (est) data = data.filter(g => g.estado === est);
+  if (desde) data = data.filter(g => g.fecha >= desde);
+  if (hasta) data = data.filter(g => g.fecha <= hasta);
+
+  document.getElementById('lista-count').textContent = `Mostrando ${data.length} de ${guardados.length} registros`;
+  document.getElementById('tbody-lista').innerHTML = data.map(g => {
+    const u = urgencia(g);
+    const entregaDate = parseEntrega(g.nota);
+    const entregaLabel = entregaDate ? fmtFecha(entregaDate) : '—';
+    const urgBadge = u
+      ? (u.tipo === 'vencida' ? `<span class="badge badge-red">-${u.dias}d</span>`
+        : u.tipo === 'proxima' ? `<span class="badge badge-amber">${u.dias}d</span>`
+        : `<span class="badge badge-blue">${u.dias}d</span>`)
+      : '—';
+    const rowClass = (u && u.tipo === 'vencida') ? ' class="urgencia-vencida"' :
+                     (u && u.tipo === 'proxima') ? ' class="urgencia-proxima"' : '';
+    return `<tr${rowClass}>
+      <td>${fmtFecha(g.fecha)}</td>
+      <td style="font-weight:600">${g.documento}</td>
+      <td style="font-size:11px">${g.ubicacion}</td>
+      <td>${estadoBadge(g.estado)}</td>
+      <td>${g.fechaDespacho ? fmtFecha(g.fechaDespacho) : '—'}</td>
+      <td>${urgBadge}</td>
+      <td style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--muted)">${g.nota || '—'}</td>
+      <td>
+        <div style="display:flex;gap:.35rem;justify-content:flex-end">
+          <button class="btn-icon" onclick="openEdit('${g._id}')" title="Editar">✏</button>
+          <button class="btn-icon del" onclick="openDelete('${g._id}')" title="Eliminar">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+/* ========== FORM ========== */
+function setDefaultFecha() {
+  const el = document.getElementById('f-fecha');
+  if (el && !el.value) el.value = today();
+}
+
+function toggleFechaDespacho(groupId) {
+  const estadoId = groupId === 'f-fecha-despacho-grp' ? 'f-estado' : 'me-estado';
+  const estado = document.getElementById(estadoId)?.value;
+  const grp = document.getElementById(groupId);
+  if (!grp) return;
+  grp.style.display = estado === 'DESPACHADO' ? 'flex' : 'none';
+}
+
+function checkDup() {
+  const doc = (document.getElementById('f-doc')?.value || '').trim().toUpperCase();
+  const ubic = (document.getElementById('f-ubic')?.value || '').trim().toUpperCase();
+  const alertEl = document.getElementById('alert-dup');
+  const msgEl = document.getElementById('alert-dup-msg');
+  if (!doc || !ubic) { alertEl.classList.remove('show'); return; }
+  const dup = guardados.find(g =>
+    g.documento.toUpperCase() === doc && g.ubicacion.toUpperCase() === ubic
+  );
+  if (dup) {
+    msgEl.textContent = `Este documento ya está registrado en ${dup.ubicacion} con estado ${dup.estado}.`;
+    alertEl.classList.add('show');
+  } else {
+    alertEl.classList.remove('show');
+  }
+}
+
+function guardar() {
+  const fecha = document.getElementById('f-fecha').value;
+  const documento = document.getElementById('f-doc').value.trim();
+  const ubicacion = document.getElementById('f-ubic').value.trim();
+  const estado = document.getElementById('f-estado').value;
+  const fechaDespacho = document.getElementById('f-fdespacho').value;
+  const nota = document.getElementById('f-nota').value.trim();
+
+  if (!fecha || !documento || !ubicacion) {
+    showToast('Completa los campos obligatorios (*)', true);
+    return;
+  }
+
+  const nuevo = { _id: genId(), fecha, documento, ubicacion, estado, fechaDespacho: estado === 'DESPACHADO' ? fechaDespacho : '', nota };
+  guardados.unshift(nuevo);
+  saveLocal();
+  limpiarForm();
+  showToast('Guardado registrado ✓');
+  renderDashboard();
+}
+
+function limpiarForm() {
+  document.getElementById('f-doc').value = '';
+  document.getElementById('f-ubic').value = '';
+  document.getElementById('f-nota').value = '';
+  document.getElementById('f-estado').value = 'PENDIENTE DESPACHO';
+  document.getElementById('f-fdespacho').value = '';
+  document.getElementById('f-fecha-despacho-grp').style.display = 'none';
+  document.getElementById('alert-dup').classList.remove('show');
+  setDefaultFecha();
+  document.getElementById('save-status').textContent = '';
+}
+
+/* ========== EDIT MODAL ========== */
+function openEdit(id) {
+  const g = guardados.find(x => x._id === id);
+  if (!g) return;
+  editingId = id;
+  document.getElementById('modal-edit-sub').textContent = `${g.documento} · ${g.ubicacion}`;
+  document.getElementById('me-ubic').value = g.ubicacion;
+  document.getElementById('me-estado').value = g.estado;
+  document.getElementById('me-fdesp').value = g.fechaDespacho || '';
+  document.getElementById('me-nota').value = g.nota || '';
+  const grp = document.getElementById('me-fdesp-grp');
+  grp.style.display = g.estado === 'DESPACHADO' ? 'flex' : 'none';
+  document.getElementById('modal-edit').style.display = 'flex';
+}
+
+function cancelEdit() {
+  document.getElementById('modal-edit').style.display = 'none';
+  editingId = null;
+}
+
+function saveEdit() {
+  if (!editingId) return;
+  const idx = guardados.findIndex(g => g._id === editingId);
+  if (idx === -1) return;
+  const estado = document.getElementById('me-estado').value;
+  guardados[idx].ubicacion = document.getElementById('me-ubic').value.trim() || guardados[idx].ubicacion;
+  guardados[idx].estado = estado;
+  guardados[idx].fechaDespacho = estado === 'DESPACHADO' ? (document.getElementById('me-fdesp').value || today()) : '';
+  guardados[idx].nota = document.getElementById('me-nota').value.trim();
+  saveLocal();
+  cancelEdit();
+  showToast('Guardado actualizado ✓');
+  renderDashboard();
+  if (document.getElementById('view-lista').classList.contains('active')) renderLista();
+}
+
+function marcarDespachado() {
+  document.getElementById('me-estado').value = 'DESPACHADO';
+  document.getElementById('me-fdesp-grp').style.display = 'flex';
+  if (!document.getElementById('me-fdesp').value) {
+    document.getElementById('me-fdesp').value = today();
+  }
+  saveEdit();
+}
+
+/* ========== DELETE MODAL ========== */
+function openDelete(id) {
+  deletingId = id;
+  document.getElementById('modal-pin').value = '';
+  document.getElementById('modal-pin-err').style.display = 'none';
+  document.getElementById('modal-delete').style.display = 'flex';
+  setTimeout(() => document.getElementById('modal-pin').focus(), 100);
+}
+
+function cancelDelete() {
+  document.getElementById('modal-delete').style.display = 'none';
+  deletingId = null;
+}
+
+function confirmDelete() {
+  const pin = document.getElementById('modal-pin').value;
+  if (pin !== DELETE_PIN) {
+    document.getElementById('modal-pin-err').style.display = 'block';
+    return;
+  }
+  guardados = guardados.filter(g => g._id !== deletingId);
+  saveLocal();
+  cancelDelete();
+  showToast('Registro eliminado', false, true);
+  renderDashboard();
+  if (document.getElementById('view-lista').classList.contains('active')) renderLista();
+}
+
+/* ========== EXPORT ========== */
+function exportCSV() {
+  const header = 'FECHA,NUMERO DOCUMENTO,UBICACION,ESTADO,FECHA DESPACHO,NOTA';
+  const rows = [...guardados]
+    .sort((a,b) => b.fecha.localeCompare(a.fecha))
+    .map(g => [
+      fmtFecha(g.fecha).replace(/\//g,'-'),
+      g.documento,
+      `"${g.ubicacion}"`,
+      g.estado,
+      g.fechaDespacho ? fmtFecha(g.fechaDespacho).replace(/\//g,'-') : '',
+      `"${g.nota || ''}"`
+    ].join(','));
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent([header, ...rows].join('\n'));
+  a.download = 'transporte-guardados-' + today() + '.csv';
+  a.click();
+  showToast('CSV exportado ✓');
+}
+
+/* ========== TOAST ========== */
+function showToast(msg, err = false, warn = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (err ? ' err' : warn ? ' warn' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ========== INIT ========== */
+loadLocal();
+setDefaultFecha();
+renderDashboard();
+</script>
+</body>
+</html>

@@ -498,6 +498,13 @@ function saveDeletedIds() {
   localStorage.setItem('transport-deleted-v1', JSON.stringify([...deletedIds]));
 }
 
+// Pending push: IDs creados en ESTE dispositivo que aún no están en la API
+// Solo este dispositivo los sube — evita que otros dispositivos re-suban registros borrados
+let pendingPushIds = new Set(JSON.parse(localStorage.getItem('transport-pending-v1') || '[]'));
+function savePendingPushIds() {
+  localStorage.setItem('transport-pending-v1', JSON.stringify([...pendingPushIds]));
+}
+
 /* ========== STORAGE ========== */
 function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(guardados)); }
 function loadLocal() {
@@ -557,6 +564,10 @@ async function deleteOne(id) {
 async function syncWithAPI() {
   setSyncStatus('syncing', 'Sincronizando...');
   try {
+    // Guardar estado local ANTES de sobrescribir con la API
+    // (necesario para recuperar registros creados offline)
+    const preSync = [...guardados];
+
     const res = await fetch(API_TRANSPORTE);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const result = await res.json();
@@ -570,13 +581,13 @@ async function syncWithAPI() {
       for (const r of pendingDeletes) {
         try {
           const delRes = await deleteOne(r.client_id);
-          if (delRes.ok) deletedIds.delete(r.client_id); // confirmado eliminado
-        } catch(e) { /* reintentará en el próximo sync */ }
+          if (delRes.ok) deletedIds.delete(r.client_id);
+        } catch(e) {}
       }
       if (pendingDeletes.length > 0) saveDeletedIds();
 
     } else {
-      // API vacía → subir todos los datos locales (primera sincronización)
+      // API vacía → primera sincronización: subir todo en bulk
       setSyncStatus('syncing', 'Subiendo datos al servidor...');
       const bulk = await fetch(API_TRANSPORTE + '/bulk', {
         method: 'POST',
@@ -586,23 +597,40 @@ async function syncWithAPI() {
       const bulkRes = await bulk.json();
       if (bulkRes.success) {
         guardados = bulkRes.data.map(mapFromAPI).filter(g => !deletedIds.has(g._id));
+        // Todos los registros locales ya subieron vía bulk — limpiar pendientes
+        pendingPushIds.clear();
+        savePendingPushIds();
       }
     }
 
-    // Detectar registros creados offline (en localStorage pero no en API)
+    // Subir SOLO registros creados en ESTE dispositivo que aún no están en la API.
+    // Usa preSync (antes del overwrite) para recuperar los datos del registro.
+    // *** Nunca usa localStorage: evita que otros dispositivos re-suban lo que no crearon ***
     const apiIds = new Set(guardados.map(g => g._id));
-    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    const offlineNew = localData.filter(g =>
-      !apiIds.has(g._id) &&
-      !g._id.startsWith('s') &&
-      !deletedIds.has(g._id)   // ← no re-subir registros eliminados
-    );
-    if (offlineNew.length > 0) {
-      setSyncStatus('syncing', `Subiendo ${offlineNew.length} registro(s) offline...`);
-      await Promise.all(offlineNew.map(pushOne));
+
+    // Limpiar pendingPushIds de IDs ya en API o ya eliminados
+    for (const id of [...pendingPushIds]) {
+      if (apiIds.has(id) || deletedIds.has(id)) pendingPushIds.delete(id);
+    }
+
+    const toUpload = [...pendingPushIds]
+      .map(id => preSync.find(g => g._id === id))
+      .filter(Boolean);
+
+    if (toUpload.length > 0) {
+      setSyncStatus('syncing', `Subiendo ${toUpload.length} registro(s) offline...`);
+      for (const g of toUpload) {
+        try {
+          await pushOne(g);
+          pendingPushIds.delete(g._id);
+        } catch(e) { /* reintentará en el próximo sync */ }
+      }
+      savePendingPushIds();
       const res2 = await fetch(API_TRANSPORTE);
       const r2 = await res2.json();
       if (r2.success) guardados = r2.data.map(mapFromAPI).filter(g => !deletedIds.has(g._id));
+    } else {
+      savePendingPushIds();
     }
 
     saveLocal();
@@ -612,7 +640,7 @@ async function syncWithAPI() {
   } catch (e) {
     console.error('Sync error:', e);
     setSyncStatus('error', 'Sin conexión — mostrando datos locales');
-    loadLocal(); // fallback
+    loadLocal();
     renderDashboard();
   }
 }
@@ -1058,11 +1086,17 @@ function guardar() {
   const nuevo = { _id: genId(), fecha, documento, ubicacion, estado, fechaDespacho: estado === 'DESPACHADO' ? fechaDespacho : '', nota };
   guardados.unshift(nuevo);
   saveLocal();
+  // Registrar como pendiente ANTES del push async (sync lo reintentará si falla)
+  pendingPushIds.add(nuevo._id);
+  savePendingPushIds();
   limpiarForm();
   showToast('Guardado registrado ✓');
   renderDashboard();
   // Subir a la API en segundo plano
-  pushOne(nuevo).catch(() => {});
+  pushOne(nuevo).then(() => {
+    pendingPushIds.delete(nuevo._id);
+    savePendingPushIds();
+  }).catch(() => {}); // queda en pendingPushIds para que sync lo reintente
 }
 
 function limpiarForm() {
@@ -1169,10 +1203,12 @@ function confirmDelete() {
     return;
   }
   const idToDelete = deletingId;
-  // Añadir al tombstone ANTES de remover localmente
-  // Así el sync nunca puede volver a agregar este registro
+  // Tombstone: el sync jamás volverá a agregar este registro
   deletedIds.add(idToDelete);
   saveDeletedIds();
+  // Cancelar push pendiente si el registro no había llegado a la API aún
+  pendingPushIds.delete(idToDelete);
+  savePendingPushIds();
   guardados = guardados.filter(g => g._id !== idToDelete);
   saveLocal();
   cancelDelete();
